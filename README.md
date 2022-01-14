@@ -1,1 +1,1 @@
-### This repo is meant to keep saved all scripts build for the game Screeps.com
+### This repo is meant for keeping saved all scripts written for the game Screeps.com
