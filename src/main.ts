@@ -2,6 +2,7 @@ import { ErrorMapper } from "utils/ErrorMapper";
 import { roleHarvester } from "role.harvester";
 import { roleUpgrader } from "role.upgrader";
 import { roleBuilder } from "role.builder";
+import { RoomInstance } from "utils/RoomInstance";
 
 declare global {
   /*
@@ -42,6 +43,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
       delete Memory.creeps[name];
     }
   }
+
 
   // Spawn new harvester if needed
   var harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester');
@@ -98,17 +100,22 @@ export const loop = ErrorMapper.wrapLoop(() => {
   }
 
   // Run creep logic
-      for(var name in Game.creeps) {
-        var creep = Game.creeps[name];
-        if(creep.memory.role == 'harvester') {
+  for (const room in Game.rooms) {
+    const roomInstance = new RoomInstance(Game.rooms[room]);
+    if (roomInstance.roomController) {
+      for (const creepName in Game.creeps) {
+        const creep = Game.creeps[creepName];
+        if (creep.memory.room === room) {
+          if (creep.memory.role === "harvester") {
             roleHarvester.run(creep);
-        }
-        if(creep.memory.role == 'upgrader') {
+          } else if (creep.memory.role === "upgrader") {
             roleUpgrader.run(creep);
-        }
-        if(creep.memory.role == 'builder') {
+          } else if (creep.memory.role === "builder") {
             roleBuilder.run(creep);
+          }
         }
+      }
     }
+  }
 
 });
