@@ -3332,6 +3332,26 @@ const roleBuilder = {
     }
 };
 
+class RoomInstance {
+    // constructor
+    constructor(room) {
+        this.room = room;
+        this.roomController = room.controller && room.controller.my ? room.controller : undefined;
+        this.roomEnergyAvailable = room.energyAvailable;
+        this.roomEnergyCapacityAvailable = room.energyCapacityAvailable;
+        this.roomStorage = room.storage && room.storage.my ? room.storage : undefined;
+        this.roomSpawns = room.find(FIND_MY_SPAWNS);
+        this.roomSources = room.find(FIND_SOURCES);
+        this.roomMyConstructionSites = room.find(FIND_MY_CONSTRUCTION_SITES);
+        // roomTerminal = room.terminal;
+        // roomStructures = room.find(FIND_STRUCTURES);
+        // roomHostiles = room.find(FIND_HOSTILE_CREEPS);
+        // roomMyCreeps = room.find(FIND_MY_CREEPS);
+        // roomMyStructures = room.find(FIND_MY_STRUCTURES);
+        // roomMyConstructionSites = room.find(FIND_MY_CONSTRUCTION_SITES);
+    }
+}
+
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 const loop = ErrorMapper.wrapLoop(() => {
@@ -3382,16 +3402,23 @@ const loop = ErrorMapper.wrapLoop(() => {
         }
     }
     // Run creep logic
-    for (var name in Game.creeps) {
-        var creep = Game.creeps[name];
-        if (creep.memory.role == 'harvester') {
-            roleHarvester.run(creep);
-        }
-        if (creep.memory.role == 'upgrader') {
-            roleUpgrader.run(creep);
-        }
-        if (creep.memory.role == 'builder') {
-            roleBuilder.run(creep);
+    for (const room in Game.rooms) {
+        const roomInstance = new RoomInstance(Game.rooms[room]);
+        if (roomInstance.roomController) {
+            for (const creepName in Game.creeps) {
+                const creep = Game.creeps[creepName];
+                if (creep.memory.room === room) {
+                    if (creep.memory.role === "harvester") {
+                        roleHarvester.run(creep);
+                    }
+                    else if (creep.memory.role === "upgrader") {
+                        roleUpgrader.run(creep);
+                    }
+                    else if (creep.memory.role === "builder") {
+                        roleBuilder.run(creep);
+                    }
+                }
+            }
         }
     }
 });

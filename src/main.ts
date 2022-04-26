@@ -3,6 +3,7 @@ import { roleHarvester } from "role.harvester";
 import { roleUpgrader } from "role.upgrader";
 import { roleBuilder } from "role.builder";
 import { RoomInstance } from "utils/RoomInstance";
+import { HelperFunctions } from "utils/HelperFunctions";
 
 declare global {
   /*
@@ -31,19 +32,19 @@ declare global {
       log: any;
     }
   }
+
 }
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 export const loop = ErrorMapper.wrapLoop(() => {
-
+  
   // Automatically delete memory of missing creeps
   for (const name in Memory.creeps) {
     if (!(name in Game.creeps)) {
       delete Memory.creeps[name];
     }
   }
-
 
   // Spawn new harvester if needed
   var harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester');
@@ -103,6 +104,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
   for (const room in Game.rooms) {
     const roomInstance = new RoomInstance(Game.rooms[room]);
     if (roomInstance.roomController) {
+
       for (const creepName in Game.creeps) {
         const creep = Game.creeps[creepName];
         if (creep.memory.room === room) {
