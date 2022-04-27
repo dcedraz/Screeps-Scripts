@@ -1,11 +1,13 @@
+import { SpawnInstance } from "SpawnInstance";
+
 export class RoomInstance {
 
     room: Room;
-    roomController: any;
+    roomController: StructureController | undefined;
     roomEnergyAvailable: number;
     roomEnergyCapacityAvailable: number;
-    roomStorage: any;
-    roomSpawns: StructureSpawn[];
+    roomStorage: StructureStorage | undefined;
+    roomSpawns: SpawnInstance;
     roomSources: Source[];
     roomMyConstructionSites: ConstructionSite[];
 
@@ -16,7 +18,7 @@ export class RoomInstance {
         this.roomEnergyAvailable = room.energyAvailable;
         this.roomEnergyCapacityAvailable = room.energyCapacityAvailable;
         this.roomStorage = room.storage && room.storage.my ? room.storage : undefined;
-        this.roomSpawns = room.find(FIND_MY_SPAWNS);
+        this.roomSpawns = new SpawnInstance(room.find(FIND_MY_SPAWNS));
         this.roomSources = room.find(FIND_SOURCES);
         this.roomMyConstructionSites = room.find(FIND_MY_CONSTRUCTION_SITES);
         // roomTerminal = room.terminal;
@@ -25,6 +27,10 @@ export class RoomInstance {
         // roomMyCreeps = room.find(FIND_MY_CREEPS);
         // roomMyStructures = room.find(FIND_MY_STRUCTURES);
         // roomMyConstructionSites = room.find(FIND_MY_CONSTRUCTION_SITES);
-    }        
+    }     
     
 }
+
+
+
+

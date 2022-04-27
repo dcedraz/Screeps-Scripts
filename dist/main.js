@@ -3247,7 +3247,16 @@ class HelperFunctions {
     static isSpawn(s) {
         return s.structureType === STRUCTURE_SPAWN;
     }
+    static isController(s) {
+        return s.structureType === STRUCTURE_CONTROLLER;
+    }
+    static printObjectById(id) {
+        JSON.stringify(Game.getObjectById(id), undefined, 4);
+    }
 }
+HelperFunctions.findCarryPartsRequired = function (distance, income) {
+    return distance * 2 * income / CARRY_CAPACITY;
+};
 
 const roleHarvester = {
     /** @param {Creep} creep **/
