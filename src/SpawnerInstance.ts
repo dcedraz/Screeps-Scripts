@@ -1,21 +1,39 @@
 // TODO: Update spawnCreeps to work with priority queues
 
-export class SpawnInstance {
+export class SpawnerInstance {
     
     spawns: StructureSpawn[];
     spawnQueue: SpawnWorkOrder[];
 
-    constructor (spawn: StructureSpawn[]) {
-        this.spawns = spawn;
+    constructor (room: Room) {
+        this.spawns = room.find(FIND_MY_SPAWNS);;
         this.spawnQueue = [];
-        if(this.spawnQueue.length) {
+       
+    }
+
+    run(): void {
+         if(this.spawnQueue.length) {
             this.spawnQueueSort();
-        }
-        if(this.spawns.length) {
             this.spawnCreeps();
         }
-    }  
+    }
 
+    // Spawn visuals
+    for (const spawn of this.spawns) {
+        if (spawn.spawning) {
+            const spawningCreep = Game.creeps[spawn.spawning.name];
+            spawn.room.visual.text(
+                '🛠️' + spawningCreep.memory.role,
+                spawn.pos.x + 1,
+                spawn.pos.y,
+                {align: 'left', opacity: 0.8});
+        }
+    }
+
+
+
+
+    
     spawnCreeps(): void {
         for (const order in this.spawnQueue) {
             const spawnRequest = this.spawnQueue[order];
@@ -82,5 +100,5 @@ interface SpawnWorkOrder {
     body: BodyPartConstant[];
     memory: CreepMemory;
     priority: number;
-    assignedSpawn: StructureSpawn;
+    assignedSpawn?: StructureSpawn;
 }

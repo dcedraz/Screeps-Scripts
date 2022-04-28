@@ -1,7 +1,4 @@
 import { ErrorMapper } from "utils/ErrorMapper";
-import { roleHarvester } from "role.harvester";
-import { roleUpgrader } from "role.upgrader";
-import { roleBuilder } from "role.builder";
 import { RoomInstance } from "RoomInstance";
 import { HelperFunctions } from "utils/HelperFunctions";
 import { SpawnInstance } from "SpawnInstance";
@@ -104,19 +101,9 @@ export const loop = ErrorMapper.wrapLoop(() => {
   // Run creep logic
   for (const room in Game.rooms) {
     const roomInstance = new RoomInstance(Game.rooms[room]);
-    if (roomInstance.roomController) {          
-      for (const creepName in Game.creeps) {
-        const creep = Game.creeps[creepName];
-        if (creep.memory.room === room) {
-          if (creep.memory.role === "harvester") {
-            roleHarvester.run(creep);
-          } else if (creep.memory.role === "upgrader") {
-            roleUpgrader.run(creep);
-          } else if (creep.memory.role === "builder") {
-            roleBuilder.run(creep);
-          }
-        }
-      }
+    if (roomInstance.roomController) {
+      roomInstance.run();
+    }
     }
   }
 
