@@ -1,7 +1,7 @@
 import { ErrorMapper } from "utils/ErrorMapper";
 import { RoomInstance } from "RoomInstance";
 import { HelperFunctions } from "utils/HelperFunctions";
-import { SpawnInstance } from "SpawnInstance";
+import { SpawnInstance } from "SpawnerInstance";
 
 declare global {
   /*
@@ -24,19 +24,25 @@ declare global {
     working: boolean;
   }
 
+  interface SpawnWorkOrder {
+    name: string;
+    body: BodyPartConstant[];
+    memory: CreepMemory;
+    priority: number;
+    assignedSpawn?: StructureSpawn;
+  }
+
   // Syntax for adding proprties to `global` (ex "global.log")
   namespace NodeJS {
     interface Global {
       log: any;
     }
   }
-
 }
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 export const loop = ErrorMapper.wrapLoop(() => {
-  
   // Automatically delete memory of missing creeps
   for (const name in Memory.creeps) {
     if (!(name in Game.creeps)) {
@@ -44,51 +50,16 @@ export const loop = ErrorMapper.wrapLoop(() => {
     }
   }
 
-  // Spawn new harvester if needed
-  var harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester');
-  if(harvesters.length < 2) {
-      var newName = 'Harvester' + Game.time;
-      console.log('Spawning new harvester: ' + newName);
-      Game.spawns['Spawn1'].spawnCreep([WORK,CARRY,MOVE], newName,
-          {memory: {role: 'harvester', working: false, room: Game.spawns['Spawn1'].room.name}});
-  }
-
-// Spawn new upgrader if needed
-  var upgraders = _.filter(Game.creeps, (creep) => creep.memory.role == 'upgrader');
-  if(upgraders.length < 1) {
-      var newName = 'Upgrader' + Game.time;
-      console.log('Spawning new upgrader: ' + newName);
-      Game.spawns['Spawn1'].spawnCreep([WORK,CARRY,MOVE], newName,
-          {memory: {role: 'upgrader', working: false, room: Game.spawns['Spawn1'].room.name}});
-  }
-
-  // Spawn new builder if needed
-  var builders = _.filter(Game.creeps, (creep) => creep.memory.role == 'builder');
-  if(builders.length < 1) {
-      var newName = 'Builder' + Game.time;
-      console.log('Spawning new builder: ' + newName);
-      Game.spawns['Spawn1'].spawnCreep([WORK,CARRY,MOVE], newName,
-          {memory: {role: 'builder', working: false, room: Game.spawns['Spawn1'].room.name}});
-  }
-
-  // Spawn visuals
-  if(Game.spawns['Spawn1'].spawning) {
-      var spawningCreep = Game.creeps[Game.spawns['Spawn1'].spawning.name];
-      Game.spawns['Spawn1'].room.visual.text(
-          '🛠️' + spawningCreep.memory.role,
-          Game.spawns['Spawn1'].pos.x + 1,
-          Game.spawns['Spawn1'].pos.y,
-          {align: 'left', opacity: 0.8});
-  }
-
   // Towers logic
-  const towers = _.filter(Game.structures, (s: Structure) => s.structureType === STRUCTURE_TOWER) as StructureTower[];
-  for (const tower of towers ) {
+  const towers = _.filter(
+    Game.structures,
+    (s: Structure) => s.structureType === STRUCTURE_TOWER
+  ) as StructureTower[];
+  for (const tower of towers) {
     const closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, {
-      filter: (structure: Structure) => structure.hits < structure.hitsMax
+      filter: (structure: Structure) => structure.hits < structure.hitsMax,
     });
     if (closestDamagedStructure) {
-
       tower.repair(closestDamagedStructure);
     }
 
@@ -98,13 +69,11 @@ export const loop = ErrorMapper.wrapLoop(() => {
     }
   }
 
-  // Run creep logic
+  // Run room logic
   for (const room in Game.rooms) {
     const roomInstance = new RoomInstance(Game.rooms[room]);
     if (roomInstance.roomController) {
       roomInstance.run();
     }
-    }
   }
-
 });
