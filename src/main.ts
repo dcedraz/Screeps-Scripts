@@ -1,7 +1,7 @@
 import { ErrorMapper } from "utils/ErrorMapper";
 import { RoomInstance } from "RoomInstance";
 import { HelperFunctions } from "utils/HelperFunctions";
-import { SpawnInstance } from "SpawnerInstance";
+import { SpawnerInstance } from "SpawnerInstance";
 
 declare global {
   /*
