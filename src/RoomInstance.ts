@@ -53,14 +53,19 @@ export class RoomInstance {
     // Spawn new creeps
     if (this.roomController && this.roomController.level <= 3) {
       if (this.roomCreeps.harvesters.length < this.roomSources.length) {
-        this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("harvester"));
+        this.roomSpawner.spawnQueueAdd(
+          this.roomCreeps.newInitialCreep(
+            "harvester",
+            this.roomCreeps.harvesters.length < 2 ? 10 : 21
+          )
+        );
       }
       if (this.roomCreeps.upgraders.length < 1) {
-        this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("upgrader"));
+        this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("upgrader", 20));
       }
 
       if (this.roomCreeps.builders.length < 1) {
-        this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("builder"));
+        this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("builder", 30));
       }
     }
 

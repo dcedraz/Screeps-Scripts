@@ -3237,27 +3237,6 @@ class ErrorMapper {
 // Cache previously mapped traces to improve performance
 ErrorMapper.cache = {};
 
-class HelperFunctions {
-    static isTower(s) {
-        return s.structureType === STRUCTURE_TOWER;
-    }
-    static isExtension(s) {
-        return s.structureType === STRUCTURE_EXTENSION;
-    }
-    static isSpawn(s) {
-        return s.structureType === STRUCTURE_SPAWN;
-    }
-    static isController(s) {
-        return s.structureType === STRUCTURE_CONTROLLER;
-    }
-    static printObjectById(id) {
-        JSON.stringify(Game.getObjectById(id), undefined, 4);
-    }
-}
-HelperFunctions.findCarryPartsRequired = function (distance, income) {
-    return (distance * 2 * income) / CARRY_CAPACITY;
-};
-
 class SpawnerInstance {
     constructor(room) {
         this.spawns = room.find(FIND_MY_SPAWNS);
@@ -3265,7 +3244,15 @@ class SpawnerInstance {
     }
     run() {
         if (this.spawnQueue.length) {
+            this.spawnQueue.forEach((spawnRequest) => {
+                console.log("BEFORE: " +
+                    JSON.stringify(spawnRequest.name + " - " + spawnRequest.priority, undefined, 4));
+            });
             this.spawnQueueSort();
+            this.spawnQueue.forEach((spawnRequest) => {
+                console.log("AFTER: " +
+                    JSON.stringify(spawnRequest.name + " - " + spawnRequest.priority, undefined, 4));
+            });
             this.spawnCreeps();
             this.spawnVisuals();
         }
@@ -3283,16 +3270,13 @@ class SpawnerInstance {
         }
     }
     spawnCreeps() {
-        for (const order in this.spawnQueue) {
-            HelperFunctions.printObjectById(this.spawnQueue[order]);
-            const spawnRequest = this.spawnQueue[order];
-            this.assignSpawn(spawnRequest);
-            if (spawnRequest.assignedSpawn) {
-                if (spawnRequest.assignedSpawn.spawnCreep(spawnRequest.body, spawnRequest.name, {
-                    memory: spawnRequest.memory,
-                })) {
-                    this.spawnQueueRemove(spawnRequest);
-                }
+        const spawnRequest = this.spawnQueue[0];
+        this.assignSpawn(spawnRequest);
+        if (spawnRequest.assignedSpawn) {
+            if (spawnRequest.assignedSpawn.spawnCreep(spawnRequest.body, spawnRequest.name, {
+                memory: spawnRequest.memory,
+            })) {
+                this.spawnQueueRemove(spawnRequest);
             }
         }
     }
@@ -3365,6 +3349,27 @@ const roleUpgrader = {
     }
 };
 
+class HelperFunctions {
+    static isTower(s) {
+        return s.structureType === STRUCTURE_TOWER;
+    }
+    static isExtension(s) {
+        return s.structureType === STRUCTURE_EXTENSION;
+    }
+    static isSpawn(s) {
+        return s.structureType === STRUCTURE_SPAWN;
+    }
+    static isController(s) {
+        return s.structureType === STRUCTURE_CONTROLLER;
+    }
+    static printObjectById(id) {
+        console.log(JSON.stringify(Game.getObjectById(id), undefined, 4));
+    }
+}
+HelperFunctions.findCarryPartsRequired = function (distance, income) {
+    return (distance * 2 * income) / CARRY_CAPACITY;
+};
+
 const roleHarvester = {
     /** @param {Creep} creep **/
     run: function (creep) {
@@ -3432,22 +3437,13 @@ class CreepsInstance {
         // this.miners = _.filter(this.creeps, (creep) => creep.memory.role == 'miner');
         // this.haulers = _.filter(this.creeps, (creep) => creep.memory.role == 'hauler');
     }
-    newInitialCreep(role) {
+    newInitialCreep(role, priory) {
         let name = role + Game.time;
-        let priority = 100;
-        switch (role) {
-            case "harvester":
-                priority = 10;
-            case "upgrader":
-                priority = 20;
-            case "builder":
-                priority = 30;
-        }
         return {
             name: name,
             body: [WORK, CARRY, MOVE],
             memory: { role: role, working: false, room: this.room.name },
-            priority: priority,
+            priority: priory,
         };
     }
     run() {
@@ -3501,13 +3497,13 @@ class RoomInstance {
         // Spawn new creeps
         if (this.roomController && this.roomController.level <= 3) {
             if (this.roomCreeps.harvesters.length < this.roomSources.length) {
-                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("harvester"));
+                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("harvester", this.roomCreeps.harvesters.length < 2 ? 10 : 21));
             }
             if (this.roomCreeps.upgraders.length < 1) {
-                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("upgrader"));
+                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("upgrader", 20));
             }
             if (this.roomCreeps.builders.length < 1) {
-                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("builder"));
+                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("builder", 30));
             }
         }
         this.roomSpawner.run();

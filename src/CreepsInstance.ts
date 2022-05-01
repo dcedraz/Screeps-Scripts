@@ -21,22 +21,13 @@ export class CreepsInstance {
     // this.haulers = _.filter(this.creeps, (creep) => creep.memory.role == 'hauler');
   }
 
-  newInitialCreep(role: string): SpawnWorkOrder {
+  newInitialCreep(role: string, priory: number): SpawnWorkOrder {
     let name = role + Game.time;
-    let priority = 100;
-    switch (role) {
-      case "harvester":
-        priority = 10;
-      case "upgrader":
-        priority = 20;
-      case "builder":
-        priority = 30;
-    }
     return {
       name: name,
       body: [WORK, CARRY, MOVE],
       memory: { role: role, working: false, room: this.room.name },
-      priority: priority,
+      priority: priory,
     };
   }
 

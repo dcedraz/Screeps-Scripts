@@ -10,7 +10,24 @@ export class SpawnerInstance {
   }
   run(): void {
     if (this.spawnQueue.length) {
+      // Debugging
+      //   this.spawnQueue.forEach((spawnRequest) => {
+      //     console.log(
+      //       "BEFORE: " +
+      //         JSON.stringify(spawnRequest.name + " - " + spawnRequest.priority, undefined, 4)
+      //     );
+      //   });
+
       this.spawnQueueSort();
+
+      // Debugging
+      //   this.spawnQueue.forEach((spawnRequest) => {
+      //     console.log(
+      //       "AFTER: " +
+      //         JSON.stringify(spawnRequest.name + " - " + spawnRequest.priority, undefined, 4)
+      //     );
+      //   });
+
       this.spawnCreeps();
       this.spawnVisuals();
     }
@@ -29,18 +46,15 @@ export class SpawnerInstance {
   }
 
   spawnCreeps(): void {
-    for (const order in this.spawnQueue) {
-      HelperFunctions.printObjectById(this.spawnQueue[order]);
-      const spawnRequest = this.spawnQueue[order];
-      this.assignSpawn(spawnRequest);
-      if (spawnRequest.assignedSpawn) {
-        if (
-          spawnRequest.assignedSpawn.spawnCreep(spawnRequest.body, spawnRequest.name, {
-            memory: spawnRequest.memory,
-          })
-        ) {
-          this.spawnQueueRemove(spawnRequest);
-        }
+    const spawnRequest = this.spawnQueue[0];
+    this.assignSpawn(spawnRequest);
+    if (spawnRequest.assignedSpawn) {
+      if (
+        spawnRequest.assignedSpawn.spawnCreep(spawnRequest.body, spawnRequest.name, {
+          memory: spawnRequest.memory,
+        })
+      ) {
+        this.spawnQueueRemove(spawnRequest);
       }
     }
   }
