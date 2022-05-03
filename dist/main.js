@@ -3244,15 +3244,21 @@ class SpawnerInstance {
     }
     run() {
         if (this.spawnQueue.length) {
-            this.spawnQueue.forEach((spawnRequest) => {
-                console.log("BEFORE: " +
-                    JSON.stringify(spawnRequest.name + " - " + spawnRequest.priority, undefined, 4));
-            });
+            // Debugging
+            //   this.spawnQueue.forEach((spawnRequest) => {
+            //     console.log(
+            //       "BEFORE: " +
+            //         JSON.stringify(spawnRequest.name + " - " + spawnRequest.priority, undefined, 4)
+            //     );
+            //   });
             this.spawnQueueSort();
-            this.spawnQueue.forEach((spawnRequest) => {
-                console.log("AFTER: " +
-                    JSON.stringify(spawnRequest.name + " - " + spawnRequest.priority, undefined, 4));
-            });
+            // Debugging
+            //   this.spawnQueue.forEach((spawnRequest) => {
+            //     console.log(
+            //       "AFTER: " +
+            //         JSON.stringify(spawnRequest.name + " - " + spawnRequest.priority, undefined, 4)
+            //     );
+            //   });
             this.spawnCreeps();
             this.spawnVisuals();
         }
@@ -3320,34 +3326,6 @@ class SpawnerInstance {
         return false;
     }
 }
-
-const roleUpgrader = {
-    /** @param {Creep} creep **/
-    run: function (creep) {
-        if (creep.memory.working && creep.store[RESOURCE_ENERGY] == 0) {
-            creep.memory.working = false;
-            creep.say('🔄 harvest');
-        }
-        if (!creep.memory.working && creep.store.getFreeCapacity() == 0) {
-            creep.memory.working = true;
-            creep.say('⚡ upgrade');
-        }
-        if (creep.memory.working) {
-            const checkController = creep.room.controller;
-            if (checkController) {
-                if (creep.upgradeController(checkController) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(checkController, { visualizePathStyle: { stroke: '#ffffff' } });
-                }
-            }
-        }
-        else {
-            var sources = creep.room.find(FIND_SOURCES);
-            if (creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(sources[0], { visualizePathStyle: { stroke: '#ffaa00' } });
-            }
-        }
-    }
-};
 
 class HelperFunctions {
     static isTower(s) {
@@ -3425,6 +3403,44 @@ const roleBuilder = {
     }
 };
 
+class RoleUpgrader {
+    constructor(creep) {
+        this.creep = creep;
+    }
+    run() {
+        if (this.creep.memory.working && this.creep.store[RESOURCE_ENERGY] == 0) {
+            this.creep.memory.working = false;
+            this.creep.say("🔄 collect");
+        }
+        if (!this.creep.memory.working && this.creep.store.getFreeCapacity() == 0) {
+            this.creep.memory.working = true;
+            this.creep.say("⚡ upgrade");
+        }
+        if (this.creep.memory.working) {
+            const checkController = this.creep.room.controller;
+            if (checkController) {
+                if (this.creep.upgradeController(checkController) == ERR_NOT_IN_RANGE) {
+                    this.creep.moveTo(checkController, { visualizePathStyle: { stroke: "#ffffff" } });
+                }
+            }
+        }
+        else {
+            var sources = this.creep.room.find(FIND_MY_STRUCTURES, {
+                filter: (structure) => {
+                    return (structure.structureType == STRUCTURE_EXTENSION ||
+                        structure.structureType == STRUCTURE_STORAGE ||
+                        (structure.structureType == STRUCTURE_SPAWN && structure.store[RESOURCE_ENERGY] > 0));
+                },
+            });
+            if (sources.length > 0) {
+                if (this.creep.withdraw(sources[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                    this.creep.moveTo(sources[0], { visualizePathStyle: { stroke: "#ffaa00" } });
+                }
+            }
+        }
+    }
+}
+
 class CreepsInstance {
     // miners: Creep[];
     // haulers: Creep[];
@@ -3454,7 +3470,7 @@ class CreepsInstance {
                 roleHarvester.run(creep);
             }
             if (creep.memory.role === "upgrader") {
-                roleUpgrader.run(creep);
+                new RoleUpgrader(creep).run();
             }
             if (creep.memory.role === "builder") {
                 roleBuilder.run(creep);

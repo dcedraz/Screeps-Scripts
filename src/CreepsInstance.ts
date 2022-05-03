@@ -1,6 +1,6 @@
-import { roleUpgrader } from "role.upgrader";
 import { roleHarvester } from "role.harvester";
 import { roleBuilder } from "role.builder";
+import { RoleUpgrader } from "RoleUpgrader";
 
 export class CreepsInstance {
   room: Room;
@@ -39,7 +39,7 @@ export class CreepsInstance {
         roleHarvester.run(creep);
       }
       if (creep.memory.role === "upgrader") {
-        roleUpgrader.run(creep);
+        new RoleUpgrader(creep).run();
       }
       if (creep.memory.role === "builder") {
         roleBuilder.run(creep);

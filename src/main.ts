@@ -22,6 +22,8 @@ declare global {
     role: string;
     room: string;
     working: boolean;
+    pos1?: RoomPosition;
+    pos2?: RoomPosition;
   }
 
   interface SpawnWorkOrder {
