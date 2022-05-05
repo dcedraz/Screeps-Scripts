@@ -22,6 +22,7 @@ declare global {
     role: string;
     room: string;
     working: boolean;
+    assigned_source?: Id<Source>;
     pos1?: RoomPosition;
     pos2?: RoomPosition;
   }

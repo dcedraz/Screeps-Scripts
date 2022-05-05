@@ -1,4 +1,4 @@
-import { roleHarvester } from "role.harvester";
+import { RoleHarvester } from "RoleHarvester";
 import { roleBuilder } from "role.builder";
 import { RoleUpgrader } from "RoleUpgrader";
 
@@ -21,12 +21,13 @@ export class CreepsInstance {
     // this.haulers = _.filter(this.creeps, (creep) => creep.memory.role == 'hauler');
   }
 
-  newInitialCreep(role: string, priory: number): SpawnWorkOrder {
-    let name = role + Game.time;
+  newInitialCreep(role: string, priory: number, source?: Source): SpawnWorkOrder {
+    let name = "Initial_" + role + "-" + Game.time;
+    let sourceId = source ? source.id : undefined;
     return {
       name: name,
       body: [WORK, CARRY, MOVE],
-      memory: { role: role, working: false, room: this.room.name },
+      memory: { role: role, working: false, room: this.room.name, assigned_source: sourceId },
       priority: priory,
     };
   }
@@ -36,7 +37,7 @@ export class CreepsInstance {
     for (const creepName in this.creeps) {
       const creep = this.creeps[creepName];
       if (creep.memory.role === "harvester") {
-        roleHarvester.run(creep);
+        new RoleHarvester(creep).runInitial();
       }
       if (creep.memory.role === "upgrader") {
         new RoleUpgrader(creep).run();

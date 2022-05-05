@@ -1,8 +1,7 @@
 import { SpawnerInstance } from "SpawnerInstance";
 import { CreepsInstance } from "CreepsInstance";
-import { roleHarvester } from "role.harvester";
-import { roleUpgrader } from "role.upgrader";
-import { roleBuilder } from "role.builder";
+
+// TODO - Create a way to control harvesters assigned to a source
 
 export class RoomInstance {
   room: Room;
@@ -25,7 +24,6 @@ export class RoomInstance {
     this.roomSpawner = new SpawnerInstance(room);
     this.roomSources = room.find(FIND_SOURCES);
     this.roomCreeps = new CreepsInstance(room);
-    room.find(FIND_MY_CREEPS);
     this.roomMyConstructionSites = room.find(FIND_MY_CONSTRUCTION_SITES);
     // roomTerminal = room.terminal;
     // roomStructures = room.find(FIND_STRUCTURES);
@@ -50,23 +48,27 @@ export class RoomInstance {
     // activate safe mode if needed
     this.runSafeMode();
 
-    // Spawn new creeps
+    // Spawn harvesters
     if (this.roomController && this.roomController.level <= 3) {
       if (this.roomCreeps.harvesters.length < this.roomSources.length) {
         this.roomSpawner.spawnQueueAdd(
           this.roomCreeps.newInitialCreep(
             "harvester",
-            this.roomCreeps.harvesters.length < 2 ? 10 : 21
+            this.roomCreeps.harvesters.length < 2 ? 10 : 21,
+            this.roomSources[this.roomCreeps.harvesters.length]
           )
         );
       }
-      if (this.roomCreeps.upgraders.length < 1) {
+
+      // Spawn upgraders
+      if (this.roomCreeps.upgraders.length < this.roomController.level) {
         this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("upgrader", 20));
       }
 
-      if (this.roomCreeps.builders.length < 1) {
-        this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("builder", 30));
-      }
+      // Spawn builders
+      // if (this.roomCreeps.builders.length < 1) {
+      //   this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("builder", 30));
+      // }
     }
 
     this.roomSpawner.run();

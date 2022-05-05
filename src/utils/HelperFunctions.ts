@@ -2,12 +2,15 @@ export class HelperFunctions {
   public static isTower(s: Structure): s is StructureTower {
     return s.structureType === STRUCTURE_TOWER;
   }
+  public static isContainer(s: Structure): s is StructureContainer {
+    return s.structureType === STRUCTURE_CONTAINER;
+  }
 
-  public static isExtension(s: Structure): s is StructureTower {
+  public static isExtension(s: Structure): s is StructureExtension {
     return s.structureType === STRUCTURE_EXTENSION;
   }
 
-  public static isSpawn(s: Structure): s is StructureTower {
+  public static isSpawn(s: Structure): s is StructureSpawn {
     return s.structureType === STRUCTURE_SPAWN;
   }
 

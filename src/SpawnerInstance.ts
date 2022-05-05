@@ -1,5 +1,3 @@
-import { HelperFunctions } from "utils/HelperFunctions";
-
 export class SpawnerInstance {
   spawns: StructureSpawn[];
   spawnQueue: SpawnWorkOrder[];
