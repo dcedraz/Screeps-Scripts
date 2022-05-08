@@ -1,5 +1,6 @@
 import { SpawnerInstance } from "SpawnerInstance";
 import { CreepsInstance } from "CreepsInstance";
+import { HelperFunctions } from "utils/HelperFunctions";
 
 // TODO - Create a way to control harvesters assigned to a source
 
@@ -22,7 +23,9 @@ export class RoomInstance {
     this.roomEnergyCapacityAvailable = room.energyCapacityAvailable;
     this.roomStorage = room.storage && room.storage.my ? room.storage : undefined;
     this.roomSpawner = new SpawnerInstance(room);
-    this.roomSources = room.find(FIND_SOURCES);
+    this.roomSources = room.find(FIND_SOURCES, {
+      filter: (source) => !HelperFunctions.isHostileNearby(source),
+    });
     this.roomCreeps = new CreepsInstance(room);
     this.roomMyConstructionSites = room.find(FIND_MY_CONSTRUCTION_SITES);
     // roomTerminal = room.terminal;

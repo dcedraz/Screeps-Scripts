@@ -3346,6 +3346,14 @@ class HelperFunctions {
     static printObjectById(id) {
         console.log(JSON.stringify(Game.getObjectById(id), undefined, 4));
     }
+    // check for hostile nearby
+    static isHostileNearby(structure) {
+        var hostile = structure.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+        if (hostile) {
+            return true;
+        }
+        return false;
+    }
 }
 HelperFunctions.findCarryPartsRequired = function (distance, income) {
     return (distance * 2 * income) / CARRY_CAPACITY;
@@ -3505,7 +3513,9 @@ class RoomInstance {
         this.roomEnergyCapacityAvailable = room.energyCapacityAvailable;
         this.roomStorage = room.storage && room.storage.my ? room.storage : undefined;
         this.roomSpawner = new SpawnerInstance(room);
-        this.roomSources = room.find(FIND_SOURCES);
+        this.roomSources = room.find(FIND_SOURCES, {
+            filter: (source) => !HelperFunctions.isHostileNearby(source),
+        });
         this.roomCreeps = new CreepsInstance(room);
         this.roomMyConstructionSites = room.find(FIND_MY_CONSTRUCTION_SITES);
         // roomTerminal = room.terminal;
@@ -3536,9 +3546,9 @@ class RoomInstance {
                 this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("upgrader", 20));
             }
             // Spawn builders
-            if (this.roomCreeps.builders.length < 1) {
-                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("builder", 30));
-            }
+            // if (this.roomCreeps.builders.length < 1) {
+            //   this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("builder", 30));
+            // }
         }
         this.roomSpawner.run();
         this.roomCreeps.run();

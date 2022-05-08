@@ -25,4 +25,14 @@ export class HelperFunctions {
   public static findCarryPartsRequired = function (distance: number, income: number) {
     return (distance * 2 * income) / CARRY_CAPACITY;
   };
+
+  // check for hostile nearby
+
+  public static isHostileNearby(structure: any): boolean {
+    var hostile = structure.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+    if (hostile) {
+      return true;
+    }
+    return false;
+  }
 }
