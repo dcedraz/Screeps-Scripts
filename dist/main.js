@@ -3398,33 +3398,57 @@ class RoleHarvester {
     }
 }
 
-const roleBuilder = {
-    /** @param {Creep} creep **/
-    run: function (creep) {
-        if (creep.memory.working && creep.store[RESOURCE_ENERGY] == 0) {
-            creep.memory.working = false;
-            creep.say('🔄 harvest');
+class RoleBuilder {
+    constructor(creep) {
+        this.creep = creep;
+    }
+    run() {
+        if (this.creep.memory.working && this.creep.store[RESOURCE_ENERGY] == 0) {
+            this.creep.memory.working = false;
+            this.creep.say("🔄 collect");
         }
-        if (!creep.memory.working && creep.store.getFreeCapacity() == 0) {
-            creep.memory.working = true;
-            creep.say('🚧 build');
+        if (!this.creep.memory.working && this.creep.store.getFreeCapacity() == 0) {
+            this.creep.memory.working = true;
+            this.creep.say("⚡ build");
         }
-        if (creep.memory.working) {
-            var targets = creep.room.find(FIND_CONSTRUCTION_SITES);
-            if (targets.length) {
-                if (creep.build(targets[0]) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(targets[0], { visualizePathStyle: { stroke: '#ffffff' } });
+        if (this.creep.memory.working) {
+            //look for construction sites
+            const constructionSites = this.creep.room.find(FIND_CONSTRUCTION_SITES);
+            if (constructionSites.length > 0) {
+                if (this.creep.build(constructionSites[0]) == ERR_NOT_IN_RANGE) {
+                    this.creep.moveTo(constructionSites[0], { visualizePathStyle: { stroke: "#ffffff" } });
+                }
+            }
+            else {
+                //if no construction sites, look for repair sites
+                const repairSites = this.creep.room.find(FIND_STRUCTURES, {
+                    filter: (structure) => {
+                        return structure.hits < structure.hitsMax;
+                    },
+                });
+                if (repairSites.length > 0) {
+                    if (this.creep.repair(repairSites[0]) == ERR_NOT_IN_RANGE) {
+                        this.creep.moveTo(repairSites[0], { visualizePathStyle: { stroke: "#ffffff" } });
+                    }
                 }
             }
         }
         else {
-            var sources = creep.room.find(FIND_SOURCES);
-            if (creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(sources[0], { visualizePathStyle: { stroke: '#ffaa00' } });
+            var sources = this.creep.room.find(FIND_MY_STRUCTURES, {
+                filter: (structure) => {
+                    return (structure.structureType == STRUCTURE_EXTENSION ||
+                        structure.structureType == STRUCTURE_STORAGE ||
+                        (structure.structureType == STRUCTURE_SPAWN && structure.store[RESOURCE_ENERGY] > 0));
+                },
+            });
+            if (sources.length > 0) {
+                if (this.creep.withdraw(sources[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                    this.creep.moveTo(sources[0], { visualizePathStyle: { stroke: "#ffaa00" } });
+                }
             }
         }
     }
-};
+}
 
 class RoleUpgrader {
     constructor(creep) {
@@ -3497,7 +3521,7 @@ class CreepsInstance {
                 new RoleUpgrader(creep).run();
             }
             if (creep.memory.role === "builder") {
-                roleBuilder.run(creep);
+                new RoleBuilder(creep).run();
             }
         }
     }
@@ -3511,7 +3535,6 @@ class RoomInstance {
         this.roomController = room.controller && room.controller.my ? room.controller : undefined;
         this.roomEnergyAvailable = room.energyAvailable;
         this.roomEnergyCapacityAvailable = room.energyCapacityAvailable;
-        this.roomStorage = room.storage && room.storage.my ? room.storage : undefined;
         this.roomSpawner = new SpawnerInstance(room);
         this.roomSources = room.find(FIND_SOURCES, {
             filter: (source) => !HelperFunctions.isHostileNearby(source),
@@ -3522,7 +3545,6 @@ class RoomInstance {
         // roomStructures = room.find(FIND_STRUCTURES);
         // roomHostiles = room.find(FIND_HOSTILE_CREEPS);
         // roomMyStructures = room.find(FIND_MY_STRUCTURES);
-        // roomMyConstructionSites = room.find(FIND_MY_CONSTRUCTION_SITES);
     }
     runSafeMode() {
         if (this.roomController &&
@@ -3533,6 +3555,60 @@ class RoomInstance {
             this.roomController.activateSafeMode();
         }
     }
+    getExtensionCount(level) {
+        switch (level) {
+            case 2:
+                return 5;
+            case 3:
+                return 10;
+            case 4:
+                return 20;
+            case 5:
+                return 30;
+            case 6:
+                return 40;
+            case 7:
+                return 50;
+            case 8:
+                return 60;
+            default:
+                return 0;
+        }
+    }
+    createExtensions() {
+        if (this.roomController && this.roomController.level > 1) {
+            // let extensionCount = HelperFunctions.getExtensionCount(this.roomController.level);
+            let extensionCount = this.getExtensionCount(this.roomController.level);
+            let extensionPositions = this.room.find(FIND_MY_CONSTRUCTION_SITES, {
+                filter: (structure) => structure.structureType === STRUCTURE_EXTENSION,
+            });
+            if (extensionPositions.length < extensionCount) {
+                for (let i = extensionPositions.length; i < extensionCount; i++) {
+                    this.room.createConstructionSite(extensionPositions[i].pos, STRUCTURE_EXTENSION);
+                }
+            }
+        }
+    }
+    // createContainers() {
+    //   if (this.roomController && this.roomController.level > 1) {
+    //     this.roomSources.forEach((source) => {
+    //       if (source.energy > 0) {
+    //         let constructionSite = this.room.createConstructionSite(
+    //           source.pos.x,
+    //           source.pos.y - 1,
+    //           STRUCTURE_CONTAINER
+    //         );
+    //         if (constructionSite === ERR_INVALID_TARGET) {
+    //           constructionSite = this.room.createConstructionSite(
+    //             source.pos.x - 1,
+    //             source.pos.y - 1,
+    //             STRUCTURE_CONTAINER
+    //           )
+    //         }
+    //       }
+    //     })
+    //   }
+    // }
     // find available sources
     findAvailableSources() {
         return this.roomSources.filter((source) => this.roomCreeps.harvesters.filter((creep) => creep.memory.assigned_source === source.id)
@@ -3551,9 +3627,9 @@ class RoomInstance {
                 this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("upgrader", 20));
             }
             // Spawn builders
-            // if (this.roomCreeps.builders.length < 1) {
-            //   this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("builder", 30));
-            // }
+            if (this.roomCreeps.builders.length < this.roomController.level * 2) {
+                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("builder", 30));
+            }
         }
         this.roomSpawner.run();
         this.roomCreeps.run();
@@ -3569,9 +3645,11 @@ class RoomInstance {
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 const loop = ErrorMapper.wrapLoop(() => {
     // Automatically delete memory of missing creeps
-    for (const name in Memory.creeps) {
-        if (!(name in Game.creeps)) {
-            delete Memory.creeps[name];
+    if (Game.time % 100 === 0) {
+        for (const name in Memory.creeps) {
+            if (!(name in Game.creeps)) {
+                delete Memory.creeps[name];
+            }
         }
     }
     // Towers logic

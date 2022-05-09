@@ -1,7 +1,5 @@
 import { ErrorMapper } from "utils/ErrorMapper";
 import { RoomInstance } from "RoomInstance";
-import { HelperFunctions } from "utils/HelperFunctions";
-import { SpawnerInstance } from "SpawnerInstance";
 
 declare global {
   /*
@@ -47,9 +45,11 @@ declare global {
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 export const loop = ErrorMapper.wrapLoop(() => {
   // Automatically delete memory of missing creeps
-  for (const name in Memory.creeps) {
-    if (!(name in Game.creeps)) {
-      delete Memory.creeps[name];
+  if (Game.time % 100 === 0) {
+    for (const name in Memory.creeps) {
+      if (!(name in Game.creeps)) {
+        delete Memory.creeps[name];
+      }
     }
   }
 
