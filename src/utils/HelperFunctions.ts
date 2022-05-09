@@ -29,8 +29,8 @@ export class HelperFunctions {
   // check for hostile nearby
 
   public static isHostileNearby(structure: any): boolean {
-    var hostile = structure.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
-    if (hostile) {
+    var hostile = structure.pos.findInRange(FIND_HOSTILE_CREEPS, 5);
+    if (hostile.length > 0) {
       return true;
     }
     return false;

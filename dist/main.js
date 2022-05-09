@@ -3348,8 +3348,8 @@ class HelperFunctions {
     }
     // check for hostile nearby
     static isHostileNearby(structure) {
-        var hostile = structure.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
-        if (hostile) {
+        var hostile = structure.pos.findInRange(FIND_HOSTILE_CREEPS, 5);
+        if (hostile.length > 0) {
             return true;
         }
         return false;
@@ -3533,13 +3533,18 @@ class RoomInstance {
             this.roomController.activateSafeMode();
         }
     }
+    // find available sources
+    findAvailableSources() {
+        return this.roomSources.filter((source) => this.roomCreeps.harvesters.filter((creep) => creep.memory.assigned_source === source.id)
+            .length === 0);
+    }
     run() {
         // activate safe mode if needed
         this.runSafeMode();
         // Spawn harvesters
         if (this.roomController && this.roomController.level <= 3) {
             if (this.roomCreeps.harvesters.length < this.roomSources.length) {
-                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("harvester", this.roomCreeps.harvesters.length < 2 ? 10 : 21, this.roomSources[this.roomCreeps.harvesters.length]));
+                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("harvester", this.roomCreeps.harvesters.length < 2 ? 10 : 21, this.findAvailableSources()[0]));
             }
             // Spawn upgraders
             if (this.roomCreeps.upgraders.length < this.roomController.level) {

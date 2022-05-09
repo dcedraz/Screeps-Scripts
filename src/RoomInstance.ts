@@ -47,6 +47,15 @@ export class RoomInstance {
     }
   }
 
+  // find available sources
+  findAvailableSources(): Source[] {
+    return this.roomSources.filter(
+      (source) =>
+        this.roomCreeps.harvesters.filter((creep) => creep.memory.assigned_source === source.id)
+          .length === 0
+    );
+  }
+
   run() {
     // activate safe mode if needed
     this.runSafeMode();
@@ -58,7 +67,7 @@ export class RoomInstance {
           this.roomCreeps.newInitialCreep(
             "harvester",
             this.roomCreeps.harvesters.length < 2 ? 10 : 21,
-            this.roomSources[this.roomCreeps.harvesters.length]
+            this.findAvailableSources()[0]
           )
         );
       }
