@@ -26,6 +26,27 @@ export class HelperFunctions {
     return (distance * 2 * income) / CARRY_CAPACITY;
   };
 
+  public static getExtensionCount(level: number): number {
+    switch (level) {
+      case 2:
+        return 5;
+      case 3:
+        return 10;
+      case 4:
+        return 20;
+      case 5:
+        return 30;
+      case 6:
+        return 40;
+      case 7:
+        return 50;
+      case 8:
+        return 60;
+      default:
+        return 0;
+    }
+  }
+
   // check for hostile nearby
 
   public static isHostileNearby(structure: any): boolean {

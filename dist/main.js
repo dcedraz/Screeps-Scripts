@@ -3346,6 +3346,26 @@ class HelperFunctions {
     static printObjectById(id) {
         console.log(JSON.stringify(Game.getObjectById(id), undefined, 4));
     }
+    static getExtensionCount(level) {
+        switch (level) {
+            case 2:
+                return 5;
+            case 3:
+                return 10;
+            case 4:
+                return 20;
+            case 5:
+                return 30;
+            case 6:
+                return 40;
+            case 7:
+                return 50;
+            case 8:
+                return 60;
+            default:
+                return 0;
+        }
+    }
     // check for hostile nearby
     static isHostileNearby(structure) {
         var hostile = structure.pos.findInRange(FIND_HOSTILE_CREEPS, 5);
@@ -3527,7 +3547,53 @@ class CreepsInstance {
     }
 }
 
-// TODO - Create a way to control harvesters assigned to a source
+class StructureInstance {
+    constructor(room, sources) {
+        this.room = room;
+        this.roomSources = sources;
+        this.roomController = room.controller;
+    }
+    createExtensions() {
+        if (this.roomController && this.roomController.level > 1) {
+            let extensionCount = HelperFunctions.getExtensionCount(this.roomController.level);
+            let extensionPositions = this.room.find(FIND_MY_CONSTRUCTION_SITES, {
+                filter: (structure) => structure.structureType === STRUCTURE_EXTENSION,
+            });
+            if (extensionPositions.length < extensionCount) {
+                for (let i = extensionPositions.length; i < extensionCount; i++) {
+                    this.room.createConstructionSite(extensionPositions[i].pos, STRUCTURE_EXTENSION);
+                }
+            }
+        }
+    }
+    createPathToSources() {
+        if (this.roomController && this.roomController.level > 1) {
+            let spawns = this.room.find(FIND_MY_SPAWNS);
+            let sources = this.roomSources;
+            for (let spawn of spawns) {
+                for (let source of sources) {
+                    let path = this.room.findPath(spawn.pos, source.pos, {
+                        maxOps: 100,
+                        ignoreCreeps: true,
+                        ignoreDestructibleStructures: true,
+                        swampCost: 1,
+                    });
+                    if (path.length > 0) {
+                        for (let i = 0; i < path.length - 2; i++) {
+                            this.room.createConstructionSite(path[i].x, path[i].y, STRUCTURE_ROAD);
+                        }
+                    }
+                    this.room.createConstructionSite(path[path.length - 2].x, path[path.length - 2].y, STRUCTURE_CONTAINER);
+                }
+            }
+        }
+    }
+    run() {
+        // this.createExtensions();
+        this.createPathToSources();
+    }
+}
+
 class RoomInstance {
     // constructor
     constructor(room) {
@@ -3541,6 +3607,7 @@ class RoomInstance {
         });
         this.roomCreeps = new CreepsInstance(room);
         this.roomMyConstructionSites = room.find(FIND_MY_CONSTRUCTION_SITES);
+        this.roomMyStructures = new StructureInstance(room, this.roomSources);
         // roomTerminal = room.terminal;
         // roomStructures = room.find(FIND_STRUCTURES);
         // roomHostiles = room.find(FIND_HOSTILE_CREEPS);
@@ -3555,62 +3622,9 @@ class RoomInstance {
             this.roomController.activateSafeMode();
         }
     }
-    getExtensionCount(level) {
-        switch (level) {
-            case 2:
-                return 5;
-            case 3:
-                return 10;
-            case 4:
-                return 20;
-            case 5:
-                return 30;
-            case 6:
-                return 40;
-            case 7:
-                return 50;
-            case 8:
-                return 60;
-            default:
-                return 0;
-        }
-    }
-    createExtensions() {
-        if (this.roomController && this.roomController.level > 1) {
-            // let extensionCount = HelperFunctions.getExtensionCount(this.roomController.level);
-            let extensionCount = this.getExtensionCount(this.roomController.level);
-            let extensionPositions = this.room.find(FIND_MY_CONSTRUCTION_SITES, {
-                filter: (structure) => structure.structureType === STRUCTURE_EXTENSION,
-            });
-            if (extensionPositions.length < extensionCount) {
-                for (let i = extensionPositions.length; i < extensionCount; i++) {
-                    this.room.createConstructionSite(extensionPositions[i].pos, STRUCTURE_EXTENSION);
-                }
-            }
-        }
-    }
-    // createContainers() {
-    //   if (this.roomController && this.roomController.level > 1) {
-    //     this.roomSources.forEach((source) => {
-    //       if (source.energy > 0) {
-    //         let constructionSite = this.room.createConstructionSite(
-    //           source.pos.x,
-    //           source.pos.y - 1,
-    //           STRUCTURE_CONTAINER
-    //         );
-    //         if (constructionSite === ERR_INVALID_TARGET) {
-    //           constructionSite = this.room.createConstructionSite(
-    //             source.pos.x - 1,
-    //             source.pos.y - 1,
-    //             STRUCTURE_CONTAINER
-    //           )
-    //         }
-    //       }
-    //     })
-    //   }
-    // }
     // find available sources
     findAvailableSources() {
+        this.roomMyStructures.run();
         return this.roomSources.filter((source) => this.roomCreeps.harvesters.filter((creep) => creep.memory.assigned_source === source.id)
             .length === 0);
     }
@@ -3627,8 +3641,8 @@ class RoomInstance {
                 this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("upgrader", 20));
             }
             // Spawn builders
-            if (this.roomCreeps.builders.length < this.roomController.level * 2) {
-                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("builder", 30));
+            if (this.roomCreeps.builders.length < this.roomController.level) {
+                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("builder", this.roomCreeps.builders.length < 1 ? 10 : 21));
             }
         }
         this.roomSpawner.run();
