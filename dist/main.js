@@ -3238,9 +3238,10 @@ class ErrorMapper {
 ErrorMapper.cache = {};
 
 class SpawnerInstance {
-    constructor(room) {
-        this.spawns = room.find(FIND_MY_SPAWNS);
-        this.spawnQueue = [];
+    constructor(room, spawns = room.find(FIND_MY_SPAWNS), spawnQueue = []) {
+        this.room = room;
+        this.spawns = spawns;
+        this.spawnQueue = spawnQueue;
     }
     run() {
         if (this.spawnQueue.length) {
@@ -3458,7 +3459,7 @@ class RoleBuilder {
                 filter: (structure) => {
                     return (structure.structureType == STRUCTURE_EXTENSION ||
                         structure.structureType == STRUCTURE_STORAGE ||
-                        (structure.structureType == STRUCTURE_SPAWN && structure.store[RESOURCE_ENERGY] > 0));
+                        (structure.structureType == STRUCTURE_SPAWN && structure.store[RESOURCE_ENERGY] > 200));
                 },
             });
             if (sources.length > 0) {
@@ -3496,7 +3497,7 @@ class RoleUpgrader {
                 filter: (structure) => {
                     return (structure.structureType == STRUCTURE_EXTENSION ||
                         structure.structureType == STRUCTURE_STORAGE ||
-                        (structure.structureType == STRUCTURE_SPAWN && structure.store[RESOURCE_ENERGY] > 0));
+                        (structure.structureType == STRUCTURE_SPAWN && structure.store[RESOURCE_ENERGY] > 200));
                 },
             });
             if (sources.length > 0) {
@@ -3509,16 +3510,22 @@ class RoleUpgrader {
 }
 
 class CreepsInstance {
-    // miners: Creep[];
-    // haulers: Creep[];
-    constructor(room) {
+    constructor(room, creeps = room.find(FIND_MY_CREEPS), harvesters = _.filter(creeps, (creep) => creep.memory.role == "harvester"), upgraders = _.filter(creeps, (creep) => creep.memory.role == "upgrader"), builders = _.filter(creeps, (creep) => creep.memory.role == "builder")) {
         this.room = room;
-        this.creeps = room.find(FIND_MY_CREEPS);
-        this.harvesters = _.filter(this.creeps, (creep) => creep.memory.role == "harvester");
-        this.upgraders = _.filter(this.creeps, (creep) => creep.memory.role == "upgrader");
-        this.builders = _.filter(this.creeps, (creep) => creep.memory.role == "builder");
-        // this.miners = _.filter(this.creeps, (creep) => creep.memory.role == 'miner');
-        // this.haulers = _.filter(this.creeps, (creep) => creep.memory.role == 'hauler');
+        this.creeps = creeps;
+        this.harvesters = harvesters;
+        this.upgraders = upgraders;
+        this.builders = builders;
+    }
+    // make creep walk over road
+    walkOverRoad(creep) {
+        let pos = creep.pos;
+        let structure = pos.lookFor(LOOK_STRUCTURES);
+        if (structure.length > 0) {
+            if (structure[0].structureType === STRUCTURE_ROAD) {
+                creep.move(creep.pos.getDirectionTo(structure[0].pos));
+            }
+        }
     }
     newInitialCreep(role, priory, source) {
         let name = "Initial_" + role + "-" + Game.time;
@@ -3547,11 +3554,11 @@ class CreepsInstance {
     }
 }
 
-class StructureInstance {
-    constructor(room, sources) {
+class StructuresInstance {
+    constructor(room, roomSources, roomController = room.controller) {
         this.room = room;
-        this.roomSources = sources;
-        this.roomController = room.controller;
+        this.roomSources = roomSources;
+        this.roomController = roomController;
     }
     createExtensions() {
         if (this.roomController && this.roomController.level > 1) {
@@ -3595,24 +3602,21 @@ class StructureInstance {
 }
 
 class RoomInstance {
-    // constructor
-    constructor(room) {
+    constructor(room, roomController = room.controller, roomEnergyAvailable = room.energyAvailable, roomEnergyCapacityAvailable = room.energyCapacityAvailable, roomSpawner = new SpawnerInstance(room), roomSources = [], roomCreeps = new CreepsInstance(room), roomMyConstructionSites = room.find(FIND_MY_CONSTRUCTION_SITES), roomMyStructures = new StructuresInstance(room, roomSources)) {
         this.room = room;
-        this.roomController = room.controller && room.controller.my ? room.controller : undefined;
-        this.roomEnergyAvailable = room.energyAvailable;
-        this.roomEnergyCapacityAvailable = room.energyCapacityAvailable;
-        this.roomSpawner = new SpawnerInstance(room);
-        this.roomSources = room.find(FIND_SOURCES, {
-            filter: (source) => !HelperFunctions.isHostileNearby(source),
-        });
-        this.roomCreeps = new CreepsInstance(room);
-        this.roomMyConstructionSites = room.find(FIND_MY_CONSTRUCTION_SITES);
-        this.roomMyStructures = new StructureInstance(room, this.roomSources);
-        // roomTerminal = room.terminal;
-        // roomStructures = room.find(FIND_STRUCTURES);
-        // roomHostiles = room.find(FIND_HOSTILE_CREEPS);
-        // roomMyStructures = room.find(FIND_MY_STRUCTURES);
+        this.roomController = roomController;
+        this.roomEnergyAvailable = roomEnergyAvailable;
+        this.roomEnergyCapacityAvailable = roomEnergyCapacityAvailable;
+        this.roomSpawner = roomSpawner;
+        this.roomSources = roomSources;
+        this.roomCreeps = roomCreeps;
+        this.roomMyConstructionSites = roomMyConstructionSites;
+        this.roomMyStructures = roomMyStructures;
     }
+    // roomTerminal = room.terminal;
+    // roomStructures = room.find(FIND_STRUCTURES);
+    // roomHostiles = room.find(FIND_HOSTILE_CREEPS);
+    // roomMyStructures = room.find(FIND_MY_STRUCTURES);
     runSafeMode() {
         if (this.roomController &&
             this.roomController.level > 1 &&
@@ -3622,31 +3626,35 @@ class RoomInstance {
             this.roomController.activateSafeMode();
         }
     }
-    // find available sources
     findAvailableSources() {
-        this.roomMyStructures.run();
-        return this.roomSources.filter((source) => this.roomCreeps.harvesters.filter((creep) => creep.memory.assigned_source === source.id)
-            .length === 0);
+        let sources = this.room.find(FIND_SOURCES);
+        this.roomSources = sources.filter((source) => !HelperFunctions.isHostileNearby(source) &&
+            this.roomCreeps.harvesters.filter((creep) => creep.memory.assigned_source === source.id)
+                .length === 0);
     }
     run() {
         // activate safe mode if needed
         this.runSafeMode();
         // Spawn harvesters
         if (this.roomController && this.roomController.level <= 3) {
-            if (this.roomCreeps.harvesters.length < this.roomSources.length) {
-                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("harvester", this.roomCreeps.harvesters.length < 2 ? 10 : 21, this.findAvailableSources()[0]));
+            if (this.roomCreeps.harvesters.length < this.roomSources.length ||
+                this.roomSources.length == 0) {
+                this.findAvailableSources();
+                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("harvester", this.roomCreeps.harvesters.length < 2 ? 10 : 21, this.roomSources[0]));
             }
             // Spawn upgraders
             if (this.roomCreeps.upgraders.length < this.roomController.level) {
                 this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("upgrader", 20));
             }
             // Spawn builders
-            if (this.roomCreeps.builders.length < this.roomController.level) {
+            if (this.roomCreeps.builders.length < this.roomController.level &&
+                this.roomController.level > 1) {
                 this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("builder", this.roomCreeps.builders.length < 1 ? 10 : 21));
             }
         }
         this.roomSpawner.run();
         this.roomCreeps.run();
+        this.roomMyStructures.run();
         // this.roomTerminal.run();
         // this.roomStructures.run();
         // this.roomHostiles.run();

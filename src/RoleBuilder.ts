@@ -1,9 +1,5 @@
 export class RoleBuilder {
-  creep: Creep;
-
-  constructor(creep: Creep) {
-    this.creep = creep;
-  }
+  constructor(public creep: Creep) {}
 
   run() {
     if (this.creep.memory.working && this.creep.store[RESOURCE_ENERGY] == 0) {
@@ -40,7 +36,7 @@ export class RoleBuilder {
           return (
             structure.structureType == STRUCTURE_EXTENSION ||
             structure.structureType == STRUCTURE_STORAGE ||
-            (structure.structureType == STRUCTURE_SPAWN && structure.store[RESOURCE_ENERGY] > 0)
+            (structure.structureType == STRUCTURE_SPAWN && structure.store[RESOURCE_ENERGY] > 200)
           );
         },
       });

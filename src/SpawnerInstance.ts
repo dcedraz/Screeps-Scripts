@@ -1,11 +1,10 @@
 export class SpawnerInstance {
-  spawns: StructureSpawn[];
-  spawnQueue: SpawnWorkOrder[];
+  constructor(
+    public room: Room,
+    public spawns: StructureSpawn[] = room.find(FIND_MY_SPAWNS),
+    public spawnQueue: SpawnWorkOrder[] = []
+  ) {}
 
-  constructor(room: Room) {
-    this.spawns = room.find(FIND_MY_SPAWNS);
-    this.spawnQueue = [];
-  }
   run(): void {
     if (this.spawnQueue.length) {
       // Debugging

@@ -1,10 +1,6 @@
 import { HelperFunctions } from "utils/HelperFunctions";
 export class RoleHarvester {
-  creep: Creep;
-
-  constructor(creep: Creep) {
-    this.creep = creep;
-  }
+  constructor(public creep: Creep) {}
 
   runInitial() {
     if (this.creep.store.getFreeCapacity() > 0) {

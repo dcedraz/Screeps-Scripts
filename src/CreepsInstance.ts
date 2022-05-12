@@ -3,22 +3,25 @@ import { RoleBuilder } from "RoleBuilder";
 import { RoleUpgrader } from "RoleUpgrader";
 
 export class CreepsInstance {
-  room: Room;
-  creeps: Creep[];
-  harvesters: Creep[];
-  upgraders: Creep[];
-  builders: Creep[];
-  // miners: Creep[];
-  // haulers: Creep[];
+  constructor(
+    public room: Room,
+    public creeps: Creep[] = room.find(FIND_MY_CREEPS),
+    public harvesters: Creep[] = _.filter(creeps, (creep) => creep.memory.role == "harvester"),
+    public upgraders: Creep[] = _.filter(creeps, (creep) => creep.memory.role == "upgrader"),
+    public builders: Creep[] = _.filter(creeps, (creep) => creep.memory.role == "builder")
+  ) // miners: Creep[] = _.filter(creeps, (creep) => creep.memory.role == 'miner');
+  // haulers: Creep[] = _.filter(creeps, (creep) => creep.memory.role == 'hauler');
+  {}
 
-  constructor(room: Room) {
-    this.room = room;
-    this.creeps = room.find(FIND_MY_CREEPS);
-    this.harvesters = _.filter(this.creeps, (creep) => creep.memory.role == "harvester");
-    this.upgraders = _.filter(this.creeps, (creep) => creep.memory.role == "upgrader");
-    this.builders = _.filter(this.creeps, (creep) => creep.memory.role == "builder");
-    // this.miners = _.filter(this.creeps, (creep) => creep.memory.role == 'miner');
-    // this.haulers = _.filter(this.creeps, (creep) => creep.memory.role == 'hauler');
+  // make creep walk over road
+  walkOverRoad(creep: Creep) {
+    let pos = creep.pos;
+    let structure = pos.lookFor(LOOK_STRUCTURES);
+    if (structure.length > 0) {
+      if (structure[0].structureType === STRUCTURE_ROAD) {
+        creep.move(creep.pos.getDirectionTo(structure[0].pos));
+      }
+    }
   }
 
   newInitialCreep(role: string, priory: number, source?: Source): SpawnWorkOrder {

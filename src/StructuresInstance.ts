@@ -1,15 +1,11 @@
 import { HelperFunctions } from "utils/HelperFunctions";
 
 export class StructuresInstance {
-  room: Room;
-  roomController: StructureController | undefined;
-  roomSources: Source[];
-
-  constructor(room: Room, sources: Source[]) {
-    this.room = room;
-    this.roomSources = sources;
-    this.roomController = room.controller;
-  }
+  constructor(
+    public room: Room,
+    public roomSources: Source[],
+    public roomController: StructureController | undefined = room.controller
+  ) {}
 
   createExtensions(): void {
     if (this.roomController && this.roomController.level > 1) {
