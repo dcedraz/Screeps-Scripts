@@ -2,13 +2,52 @@ import { HelperFunctions } from "utils/HelperFunctions";
 export class RoleHarvester {
   constructor(public creep: Creep) {}
 
+  findClosestSpawn(): StructureSpawn {
+    let spawn = this.creep.pos.findClosestByPath(FIND_MY_SPAWNS);
+    if (spawn) {
+      return spawn;
+    }
+    return this.creep.room.find(FIND_MY_SPAWNS)[0];
+  }
+
+  createPathToSource(path: PathStep[]) {
+    if (path.length > 0) {
+      for (let i = 0; i < path.length - 2; i++) {
+        this.creep.room.createConstructionSite(path[i].x, path[i].y, STRUCTURE_ROAD);
+      }
+    }
+    this.creep.room.createConstructionSite(
+      path[path.length - 2].x,
+      path[path.length - 2].y,
+      STRUCTURE_CONTAINER
+    );
+  }
+
   runInitial() {
     if (this.creep.store.getFreeCapacity() > 0) {
       if (this.creep.memory.assigned_source) {
         var source = Game.getObjectById(this.creep.memory.assigned_source);
         if (source) {
+          if (!this.creep.memory.pathToSource) {
+            this.creep.memory.pathToSource = this.creep.room.findPath(
+              this.findClosestSpawn().pos,
+              source.pos,
+              {
+                maxOps: 100,
+                ignoreCreeps: true,
+                ignoreDestructibleStructures: true,
+                swampCost: 1,
+              }
+            );
+            this.createPathToSource(this.creep.memory.pathToSource);
+          }
+
           if (this.creep.harvest(source) == ERR_NOT_IN_RANGE) {
-            this.creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
+            this.creep.moveTo(
+              this.creep.memory.pathToSource[0].x,
+              this.creep.memory.pathToSource[0].y
+            );
+            this.creep.moveByPath(this.creep.memory.pathToSource);
           }
         }
       } else {

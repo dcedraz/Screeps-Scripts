@@ -70,8 +70,9 @@ export class SpawnerInstance {
     }
   }
 
-  spawnQueueAdd(spawnRequest: SpawnWorkOrder): void {
+  spawnQueueAdd(spawnRequest: SpawnWorkOrder) {
     this.spawnQueue.push(spawnRequest);
+    this.assignSpawn(spawnRequest);
   }
 
   spawnQueueRemove(spawnRequest: SpawnWorkOrder): void {

@@ -25,7 +25,7 @@ declare global {
   }
 
   interface RoomMemory {
-    roomSources: Source[];
+    sourcesMapped: Source[];
   }
 
   interface SpawnWorkOrder {

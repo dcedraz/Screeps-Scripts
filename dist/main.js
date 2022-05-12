@@ -3302,6 +3302,7 @@ class SpawnerInstance {
     }
     spawnQueueAdd(spawnRequest) {
         this.spawnQueue.push(spawnRequest);
+        this.assignSpawn(spawnRequest);
     }
     spawnQueueRemove(spawnRequest) {
         const index = this.spawnQueue.indexOf(spawnRequest);
@@ -3384,13 +3385,38 @@ class RoleHarvester {
     constructor(creep) {
         this.creep = creep;
     }
+    findClosestSpawn() {
+        let spawn = this.creep.pos.findClosestByPath(FIND_MY_SPAWNS);
+        if (spawn) {
+            return spawn;
+        }
+        return this.creep.room.find(FIND_MY_SPAWNS)[0];
+    }
+    createPathToSource(path) {
+        if (path.length > 0) {
+            for (let i = 0; i < path.length - 2; i++) {
+                this.creep.room.createConstructionSite(path[i].x, path[i].y, STRUCTURE_ROAD);
+            }
+        }
+        this.creep.room.createConstructionSite(path[path.length - 2].x, path[path.length - 2].y, STRUCTURE_CONTAINER);
+    }
     runInitial() {
         if (this.creep.store.getFreeCapacity() > 0) {
             if (this.creep.memory.assigned_source) {
                 var source = Game.getObjectById(this.creep.memory.assigned_source);
                 if (source) {
+                    if (!this.creep.memory.pathToSource) {
+                        this.creep.memory.pathToSource = this.creep.room.findPath(this.findClosestSpawn().pos, source.pos, {
+                            maxOps: 100,
+                            ignoreCreeps: true,
+                            ignoreDestructibleStructures: true,
+                            swampCost: 1,
+                        });
+                        this.createPathToSource(this.creep.memory.pathToSource);
+                    }
                     if (this.creep.harvest(source) == ERR_NOT_IN_RANGE) {
-                        this.creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
+                        this.creep.moveTo(this.creep.memory.pathToSource[0].x, this.creep.memory.pathToSource[0].y);
+                        this.creep.moveByPath(this.creep.memory.pathToSource);
                     }
                 }
             }
@@ -3555,9 +3581,8 @@ class CreepsInstance {
 }
 
 class StructuresInstance {
-    constructor(room, roomSources, roomController = room.controller) {
+    constructor(room, roomController = room.controller) {
         this.room = room;
-        this.roomSources = roomSources;
         this.roomController = roomController;
     }
     createExtensions() {
@@ -3573,31 +3598,8 @@ class StructuresInstance {
             }
         }
     }
-    createPathToSources() {
-        if (this.roomController && this.roomController.level > 1) {
-            let spawns = this.room.find(FIND_MY_SPAWNS);
-            let sources = this.roomSources;
-            for (let spawn of spawns) {
-                for (let source of sources) {
-                    let path = this.room.findPath(spawn.pos, source.pos, {
-                        maxOps: 100,
-                        ignoreCreeps: true,
-                        ignoreDestructibleStructures: true,
-                        swampCost: 1,
-                    });
-                    if (path.length > 0) {
-                        for (let i = 0; i < path.length - 2; i++) {
-                            this.room.createConstructionSite(path[i].x, path[i].y, STRUCTURE_ROAD);
-                        }
-                    }
-                    this.room.createConstructionSite(path[path.length - 2].x, path[path.length - 2].y, STRUCTURE_CONTAINER);
-                }
-            }
-        }
-    }
     run() {
         // this.createExtensions();
-        this.createPathToSources();
     }
 }
 
