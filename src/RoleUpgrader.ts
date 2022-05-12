@@ -24,7 +24,7 @@ export class RoleUpgrader {
           return (
             structure.structureType == STRUCTURE_EXTENSION ||
             structure.structureType == STRUCTURE_STORAGE ||
-            (structure.structureType == STRUCTURE_SPAWN && structure.store[RESOURCE_ENERGY] > 200)
+            (structure.structureType == STRUCTURE_SPAWN && structure.store[RESOURCE_ENERGY] > 0)
           );
         },
       });

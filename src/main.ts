@@ -21,6 +21,11 @@ declare global {
     room: string;
     working: boolean;
     assigned_source?: Id<Source>;
+    pathToSource?: PathStep[];
+  }
+
+  interface RoomMemory {
+    roomSources: Source[];
   }
 
   interface SpawnWorkOrder {

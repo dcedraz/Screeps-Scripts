@@ -3497,7 +3497,7 @@ class RoleUpgrader {
                 filter: (structure) => {
                     return (structure.structureType == STRUCTURE_EXTENSION ||
                         structure.structureType == STRUCTURE_STORAGE ||
-                        (structure.structureType == STRUCTURE_SPAWN && structure.store[RESOURCE_ENERGY] > 200));
+                        (structure.structureType == STRUCTURE_SPAWN && structure.store[RESOURCE_ENERGY] > 0));
                 },
             });
             if (sources.length > 0) {
@@ -3602,7 +3602,9 @@ class StructuresInstance {
 }
 
 class RoomInstance {
-    constructor(room, roomController = room.controller, roomEnergyAvailable = room.energyAvailable, roomEnergyCapacityAvailable = room.energyCapacityAvailable, roomSpawner = new SpawnerInstance(room), roomSources = [], roomCreeps = new CreepsInstance(room), roomMyConstructionSites = room.find(FIND_MY_CONSTRUCTION_SITES), roomMyStructures = new StructuresInstance(room, roomSources)) {
+    constructor(room, roomController = room.controller, roomEnergyAvailable = room.energyAvailable, roomEnergyCapacityAvailable = room.energyCapacityAvailable, roomSpawner = new SpawnerInstance(room), roomSources = room.find(FIND_SOURCES, {
+        filter: (source) => !HelperFunctions.isHostileNearby(source),
+    }), roomCreeps = new CreepsInstance(room), roomMyConstructionSites = room.find(FIND_MY_CONSTRUCTION_SITES), roomMyStructures = new StructuresInstance(room, roomSources)) {
         this.room = room;
         this.roomController = roomController;
         this.roomEnergyAvailable = roomEnergyAvailable;
@@ -3627,20 +3629,16 @@ class RoomInstance {
         }
     }
     findAvailableSources() {
-        let sources = this.room.find(FIND_SOURCES);
-        this.roomSources = sources.filter((source) => !HelperFunctions.isHostileNearby(source) &&
-            this.roomCreeps.harvesters.filter((creep) => creep.memory.assigned_source === source.id)
-                .length === 0);
+        return this.roomSources.filter((source) => this.roomCreeps.harvesters.filter((creep) => creep.memory.assigned_source === source.id)
+            .length === 0);
     }
     run() {
         // activate safe mode if needed
         this.runSafeMode();
         // Spawn harvesters
         if (this.roomController && this.roomController.level <= 3) {
-            if (this.roomCreeps.harvesters.length < this.roomSources.length ||
-                this.roomSources.length == 0) {
-                this.findAvailableSources();
-                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("harvester", this.roomCreeps.harvesters.length < 2 ? 10 : 21, this.roomSources[0]));
+            if (this.roomCreeps.harvesters.length < this.roomSources.length) {
+                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("harvester", this.roomCreeps.harvesters.length < 2 ? 10 : 21, this.findAvailableSources()[0]));
             }
             // Spawn upgraders
             if (this.roomCreeps.upgraders.length < this.roomController.level) {

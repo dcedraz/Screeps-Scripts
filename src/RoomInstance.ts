@@ -10,7 +10,9 @@ export class RoomInstance {
     public roomEnergyAvailable: number = room.energyAvailable,
     public roomEnergyCapacityAvailable: number = room.energyCapacityAvailable,
     public roomSpawner: SpawnerInstance = new SpawnerInstance(room),
-    public roomSources: Source[] = [],
+    public roomSources: Source[] = room.find(FIND_SOURCES, {
+      filter: (source) => !HelperFunctions.isHostileNearby(source),
+    }),
     public roomCreeps: CreepsInstance = new CreepsInstance(room),
     public roomMyConstructionSites: ConstructionSite[] = room.find(FIND_MY_CONSTRUCTION_SITES),
     public roomMyStructures: StructuresInstance = new StructuresInstance(room, roomSources)
@@ -32,11 +34,9 @@ export class RoomInstance {
     }
   }
 
-  findAvailableSources(): void {
-    let sources = this.room.find(FIND_SOURCES);
-    this.roomSources = sources.filter(
+  findAvailableSources(): Source[] {
+    return this.roomSources.filter(
       (source) =>
-        !HelperFunctions.isHostileNearby(source) &&
         this.roomCreeps.harvesters.filter((creep) => creep.memory.assigned_source === source.id)
           .length === 0
     );
@@ -48,16 +48,12 @@ export class RoomInstance {
 
     // Spawn harvesters
     if (this.roomController && this.roomController.level <= 3) {
-      if (
-        this.roomCreeps.harvesters.length < this.roomSources.length ||
-        this.roomSources.length == 0
-      ) {
-        this.findAvailableSources();
+      if (this.roomCreeps.harvesters.length < this.roomSources.length) {
         this.roomSpawner.spawnQueueAdd(
           this.roomCreeps.newInitialCreep(
             "harvester",
             this.roomCreeps.harvesters.length < 2 ? 10 : 21,
-            this.roomSources[0]
+            this.findAvailableSources()[0]
           )
         );
       }
