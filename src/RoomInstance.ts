@@ -60,15 +60,12 @@ export class RoomInstance {
       }
 
       // Spawn upgraders
-      if (this.roomCreeps.upgraders.length < this.roomController.level) {
+      if (this.roomCreeps.upgraders.length < 1) {
         this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("upgrader", 20));
       }
 
       // Spawn builders
-      if (
-        this.roomCreeps.builders.length < this.roomController.level &&
-        this.roomController.level > 1
-      ) {
+      if (this.roomCreeps.builders.length < 1 && this.roomController.level > 1) {
         this.roomSpawner.spawnQueueAdd(
           this.roomCreeps.newInitialCreep("builder", this.roomCreeps.builders.length < 1 ? 10 : 21)
         );

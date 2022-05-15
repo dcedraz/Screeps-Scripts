@@ -3502,15 +3502,22 @@ class RoleBuilder {
             }
         }
         else {
-            var sources = this.creep.room.find(FIND_MY_STRUCTURES, {
+            var storage = this.creep.room.find(FIND_MY_STRUCTURES, {
                 filter: (structure) => {
-                    return (structure.structureType == STRUCTURE_EXTENSION ||
+                    return ((structure.structureType == STRUCTURE_EXTENSION ||
                         structure.structureType == STRUCTURE_STORAGE ||
-                        (structure.structureType == STRUCTURE_SPAWN && structure.store[RESOURCE_ENERGY] > 200));
+                        structure.structureType == STRUCTURE_SPAWN) &&
+                        structure.store[RESOURCE_ENERGY] > 50);
                 },
             });
-            if (sources.length > 0) {
-                if (this.creep.withdraw(sources[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+            if (storage.length > 0) {
+                if (this.creep.withdraw(storage[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                    this.creep.moveTo(storage[0], { visualizePathStyle: { stroke: "#ffaa00" } });
+                }
+            }
+            else {
+                var sources = this.creep.room.find(FIND_SOURCES);
+                if (this.creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
                     this.creep.moveTo(sources[0], { visualizePathStyle: { stroke: "#ffaa00" } });
                 }
             }
@@ -3611,24 +3618,24 @@ class StructuresInstance {
     createExtensions() {
         if (this.roomController && this.roomController.level > 1) {
             let mainSpawn = this.room.find(FIND_MY_SPAWNS)[0];
-            let initialPos = this.room.getPositionAt(mainSpawn.pos.x + 1, mainSpawn.pos.y + 1);
+            let initialPos = this.room.getPositionAt(mainSpawn.pos.x, mainSpawn.pos.y + 1);
             let extensionCount = HelperFunctions.getExtensionCount(this.roomController.level);
             let extensionPositions = this.room.find(FIND_MY_CONSTRUCTION_SITES, {
                 filter: (structure) => structure.structureType === STRUCTURE_EXTENSION,
             });
-            if (extensionCount < 1 && initialPos) {
+            if (extensionPositions.length < 1 && initialPos) {
                 this.room.createConstructionSite(initialPos, STRUCTURE_EXTENSION);
             }
             if (extensionPositions.length < extensionCount) {
-                for (let i = extensionPositions.length; i < extensionCount; i++) {
+                for (let i = extensionPositions.length - 1; i < extensionCount; i++) {
                     if (i % 2 === 0) {
-                        let targetPos = this.room.getPositionAt(extensionPositions[i].pos.x + 1, extensionPositions[i].pos.y);
+                        let targetPos = this.room.getPositionAt(extensionPositions[i].pos.x - 1, extensionPositions[i].pos.y);
                         if (targetPos) {
                             this.room.createConstructionSite(targetPos, STRUCTURE_EXTENSION);
                         }
                     }
                     else {
-                        let targetPos = this.room.getPositionAt(extensionPositions[i].pos.x, extensionPositions[i].pos.y + 1);
+                        let targetPos = this.room.getPositionAt(extensionPositions[i].pos.x, extensionPositions[i].pos.y - 1);
                         if (targetPos) {
                             this.room.createConstructionSite(targetPos, STRUCTURE_EXTENSION);
                         }
@@ -3666,9 +3673,8 @@ class StructuresInstance {
         }
     }
     run() {
-        // this.createExtensions();
-        this.createSourceStructures();
         this.createExtensions();
+        this.createSourceStructures();
     }
 }
 
@@ -3713,12 +3719,11 @@ class RoomInstance {
                 this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("harvester", this.roomCreeps.harvesters.length < 2 ? 10 : 21, targetSource));
             }
             // Spawn upgraders
-            if (this.roomCreeps.upgraders.length < this.roomController.level) {
+            if (this.roomCreeps.upgraders.length < 1) {
                 this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("upgrader", 20));
             }
             // Spawn builders
-            if (this.roomCreeps.builders.length < this.roomController.level &&
-                this.roomController.level > 1) {
+            if (this.roomCreeps.builders.length < 1 && this.roomController.level > 1) {
                 this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("builder", this.roomCreeps.builders.length < 1 ? 10 : 21));
             }
         }

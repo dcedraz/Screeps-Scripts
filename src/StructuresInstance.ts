@@ -10,20 +10,20 @@ export class StructuresInstance {
   createExtensions(): void {
     if (this.roomController && this.roomController.level > 1) {
       let mainSpawn = this.room.find(FIND_MY_SPAWNS)[0];
-      let initialPos = this.room.getPositionAt(mainSpawn.pos.x + 1, mainSpawn.pos.y + 1);
+      let initialPos = this.room.getPositionAt(mainSpawn.pos.x, mainSpawn.pos.y + 1);
 
       let extensionCount = HelperFunctions.getExtensionCount(this.roomController.level);
       let extensionPositions = this.room.find(FIND_MY_CONSTRUCTION_SITES, {
         filter: (structure) => structure.structureType === STRUCTURE_EXTENSION,
       });
-      if (extensionCount < 1 && initialPos) {
+      if (extensionPositions.length < 1 && initialPos) {
         this.room.createConstructionSite(initialPos, STRUCTURE_EXTENSION);
       }
       if (extensionPositions.length < extensionCount) {
-        for (let i = extensionPositions.length; i < extensionCount; i++) {
+        for (let i = extensionPositions.length - 1; i < extensionCount; i++) {
           if (i % 2 === 0) {
             let targetPos = this.room.getPositionAt(
-              extensionPositions[i].pos.x + 1,
+              extensionPositions[i].pos.x - 1,
               extensionPositions[i].pos.y
             );
             if (targetPos) {
@@ -32,7 +32,7 @@ export class StructuresInstance {
           } else {
             let targetPos = this.room.getPositionAt(
               extensionPositions[i].pos.x,
-              extensionPositions[i].pos.y + 1
+              extensionPositions[i].pos.y - 1
             );
             if (targetPos) {
               this.room.createConstructionSite(targetPos, STRUCTURE_EXTENSION);
@@ -80,8 +80,7 @@ export class StructuresInstance {
   }
 
   run() {
-    // this.createExtensions();
-    this.createSourceStructures();
     this.createExtensions();
+    this.createSourceStructures();
   }
 }
