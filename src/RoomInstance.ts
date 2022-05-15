@@ -7,16 +7,18 @@ export class RoomInstance {
   constructor(
     public room: Room,
     public roomController: StructureController | undefined = room.controller,
-    public roomEnergyAvailable: number = room.energyAvailable,
-    public roomEnergyCapacityAvailable: number = room.energyCapacityAvailable,
     public roomSpawner: SpawnerInstance = new SpawnerInstance(room),
     public roomSources: Source[] = room.find(FIND_SOURCES, {
       filter: (source) => !HelperFunctions.isHostileNearby(source),
     }),
-    public roomCreeps: CreepsInstance = new CreepsInstance(room),
-    public roomMyConstructionSites: ConstructionSite[] = room.find(FIND_MY_CONSTRUCTION_SITES),
-    public roomStructuresInstance: StructuresInstance = new StructuresInstance(room, roomSources)
+    public roomStructuresInstance: StructuresInstance = new StructuresInstance(room, roomSources),
+    public roomCreeps: CreepsInstance = new CreepsInstance(
+      room,
+      roomStructuresInstance.myConstructionSites
+    )
   ) {}
+  // public roomEnergyAvailable: number = room.energyAvailable,
+  // public roomEnergyCapacityAvailable: number = room.energyCapacityAvailable,
   // roomTerminal = room.terminal;
   // roomStructures = room.find(FIND_STRUCTURES);
   // roomHostiles = room.find(FIND_HOSTILE_CREEPS);

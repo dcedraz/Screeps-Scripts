@@ -5,12 +5,12 @@ import { RoleUpgrader } from "RoleUpgrader";
 export class CreepsInstance {
   constructor(
     public room: Room,
+    public myConstructionSites: ConstructionSite[],
     public creeps: Creep[] = room.find(FIND_MY_CREEPS),
     public harvesters: Creep[] = _.filter(creeps, (creep) => creep.memory.role == "harvester"),
     public upgraders: Creep[] = _.filter(creeps, (creep) => creep.memory.role == "upgrader"),
-    public builders: Creep[] = _.filter(creeps, (creep) => creep.memory.role == "builder") // miners: Creep[] = _.filter(creeps, (creep) => creep.memory.role == 'miner');
-  ) // haulers: Creep[] = _.filter(creeps, (creep) => creep.memory.role == 'hauler');
-  {}
+    public builders: Creep[] = _.filter(creeps, (creep) => creep.memory.role == "builder") // miners: Creep[] = _.filter(creeps, (creep) => creep.memory.role == 'miner'); // haulers: Creep[] = _.filter(creeps, (creep) => creep.memory.role == 'hauler');
+  ) {}
 
   // make creep walk over road
   walkOverRoad(creep: Creep) {
@@ -45,7 +45,7 @@ export class CreepsInstance {
         new RoleUpgrader(creep).run();
       }
       if (creep.memory.role === "builder") {
-        new RoleBuilder(creep).run();
+        new RoleBuilder(creep, this.myConstructionSites).run();
       }
     }
   }

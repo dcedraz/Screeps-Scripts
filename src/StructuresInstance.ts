@@ -4,7 +4,8 @@ export class StructuresInstance {
   constructor(
     public room: Room,
     public roomSources: Source[],
-    public roomController: StructureController | undefined = room.controller
+    public roomController: StructureController | undefined = room.controller,
+    public myConstructionSites: ConstructionSite[] = room.find(FIND_CONSTRUCTION_SITES)
   ) {}
 
   createExtensions(): void {
@@ -79,7 +80,34 @@ export class StructuresInstance {
     }
   }
 
+  // sort construction site array by structure type
+  sortConstructionSites(): void {
+    let sortedSites: ConstructionSite[] = [];
+    let sites = this.myConstructionSites;
+    for (const site of sites) {
+      if (site.structureType == STRUCTURE_EXTENSION) {
+        sortedSites.push(site);
+      } else if (site.structureType == STRUCTURE_SPAWN) {
+        sortedSites.push(site);
+      } else if (site.structureType == STRUCTURE_TOWER) {
+        sortedSites.push(site);
+      } else if (site.structureType == STRUCTURE_CONTAINER) {
+        sortedSites.push(site);
+      } else if (site.structureType == STRUCTURE_STORAGE) {
+        sortedSites.push(site);
+      } else if (site.structureType == STRUCTURE_ROAD) {
+        sortedSites.push(site);
+      } else if (site.structureType == STRUCTURE_WALL) {
+        sortedSites.push(site);
+      } else if (site.structureType == STRUCTURE_RAMPART) {
+        sortedSites.push(site);
+      }
+    }
+    this.myConstructionSites = sortedSites;
+  }
+
   run() {
+    this.sortConstructionSites();
     this.createExtensions();
     this.createSourceStructures();
   }
