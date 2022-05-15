@@ -59,7 +59,7 @@ export class HelperFunctions {
 
   // check for harvester nearby
   public static isCreepNearby(structure: any): boolean {
-    var creep = structure.pos.findInRange(FIND_MY_CREEPS, 5);
+    var creep = structure.pos.findInRange(FIND_MY_CREEPS, 1);
     if (creep.length > 0) {
       return true;
     }
