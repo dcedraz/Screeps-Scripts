@@ -15,7 +15,7 @@ export class RoomInstance {
     }),
     public roomCreeps: CreepsInstance = new CreepsInstance(room),
     public roomMyConstructionSites: ConstructionSite[] = room.find(FIND_MY_CONSTRUCTION_SITES),
-    public roomMyStructures: StructuresInstance = new StructuresInstance(room, roomSources)
+    public roomStructuresInstance: StructuresInstance = new StructuresInstance(room, roomSources)
   ) {}
   // roomTerminal = room.terminal;
   // roomStructures = room.find(FIND_STRUCTURES);
@@ -49,11 +49,12 @@ export class RoomInstance {
     // Spawn harvesters
     if (this.roomController && this.roomController.level <= 3) {
       if (this.roomCreeps.harvesters.length < this.roomSources.length) {
+        let targetSource = this.findAvailableSources()[0];
         this.roomSpawner.spawnQueueAdd(
           this.roomCreeps.newInitialCreep(
             "harvester",
             this.roomCreeps.harvesters.length < 2 ? 10 : 21,
-            this.findAvailableSources()[0]
+            targetSource
           )
         );
       }
@@ -76,7 +77,7 @@ export class RoomInstance {
 
     this.roomSpawner.run();
     this.roomCreeps.run();
-    this.roomMyStructures.run();
+    this.roomStructuresInstance.run();
     // this.roomTerminal.run();
     // this.roomStructures.run();
     // this.roomHostiles.run();

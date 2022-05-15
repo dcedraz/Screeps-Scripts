@@ -3405,18 +3405,8 @@ class RoleHarvester {
             if (this.creep.memory.assigned_source) {
                 var source = Game.getObjectById(this.creep.memory.assigned_source);
                 if (source) {
-                    if (!this.creep.memory.pathToSource) {
-                        this.creep.memory.pathToSource = this.creep.room.findPath(this.findClosestSpawn().pos, source.pos, {
-                            maxOps: 100,
-                            ignoreCreeps: true,
-                            ignoreDestructibleStructures: true,
-                            swampCost: 1,
-                        });
-                        this.createPathToSource(this.creep.memory.pathToSource);
-                    }
                     if (this.creep.harvest(source) == ERR_NOT_IN_RANGE) {
-                        this.creep.moveTo(this.creep.memory.pathToSource[0].x, this.creep.memory.pathToSource[0].y);
-                        this.creep.moveByPath(this.creep.memory.pathToSource);
+                        this.creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
                     }
                 }
             }
@@ -3449,6 +3439,37 @@ class RoleBuilder {
     constructor(creep) {
         this.creep = creep;
     }
+    // sort construction site array by structure type
+    sortConstructionSites(sites) {
+        let sortedSites = [];
+        for (const site of sites) {
+            if (site.structureType == STRUCTURE_EXTENSION) {
+                sortedSites.push(site);
+            }
+            else if (site.structureType == STRUCTURE_SPAWN) {
+                sortedSites.push(site);
+            }
+            else if (site.structureType == STRUCTURE_TOWER) {
+                sortedSites.push(site);
+            }
+            else if (site.structureType == STRUCTURE_CONTAINER) {
+                sortedSites.push(site);
+            }
+            else if (site.structureType == STRUCTURE_STORAGE) {
+                sortedSites.push(site);
+            }
+            else if (site.structureType == STRUCTURE_ROAD) {
+                sortedSites.push(site);
+            }
+            else if (site.structureType == STRUCTURE_WALL) {
+                sortedSites.push(site);
+            }
+            else if (site.structureType == STRUCTURE_RAMPART) {
+                sortedSites.push(site);
+            }
+        }
+        return sortedSites;
+    }
     run() {
         if (this.creep.memory.working && this.creep.store[RESOURCE_ENERGY] == 0) {
             this.creep.memory.working = false;
@@ -3459,8 +3480,8 @@ class RoleBuilder {
             this.creep.say("⚡ build");
         }
         if (this.creep.memory.working) {
-            //look for construction sites
             const constructionSites = this.creep.room.find(FIND_CONSTRUCTION_SITES);
+            this.sortConstructionSites(constructionSites);
             if (constructionSites.length > 0) {
                 if (this.creep.build(constructionSites[0]) == ERR_NOT_IN_RANGE) {
                     this.creep.moveTo(constructionSites[0], { visualizePathStyle: { stroke: "#ffffff" } });
@@ -3536,7 +3557,8 @@ class RoleUpgrader {
 }
 
 class CreepsInstance {
-    constructor(room, creeps = room.find(FIND_MY_CREEPS), harvesters = _.filter(creeps, (creep) => creep.memory.role == "harvester"), upgraders = _.filter(creeps, (creep) => creep.memory.role == "upgrader"), builders = _.filter(creeps, (creep) => creep.memory.role == "builder")) {
+    constructor(room, creeps = room.find(FIND_MY_CREEPS), harvesters = _.filter(creeps, (creep) => creep.memory.role == "harvester"), upgraders = _.filter(creeps, (creep) => creep.memory.role == "upgrader"), builders = _.filter(creeps, (creep) => creep.memory.role == "builder") // miners: Creep[] = _.filter(creeps, (creep) => creep.memory.role == 'miner');
+    ) {
         this.room = room;
         this.creeps = creeps;
         this.harvesters = harvesters;
@@ -3581,32 +3603,79 @@ class CreepsInstance {
 }
 
 class StructuresInstance {
-    constructor(room, roomController = room.controller) {
+    constructor(room, roomSources, roomController = room.controller) {
         this.room = room;
+        this.roomSources = roomSources;
         this.roomController = roomController;
     }
     createExtensions() {
         if (this.roomController && this.roomController.level > 1) {
+            let mainSpawn = this.room.find(FIND_MY_SPAWNS)[0];
+            let initialPos = this.room.getPositionAt(mainSpawn.pos.x + 1, mainSpawn.pos.y + 1);
             let extensionCount = HelperFunctions.getExtensionCount(this.roomController.level);
             let extensionPositions = this.room.find(FIND_MY_CONSTRUCTION_SITES, {
                 filter: (structure) => structure.structureType === STRUCTURE_EXTENSION,
             });
+            if (extensionCount < 1 && initialPos) {
+                this.room.createConstructionSite(initialPos, STRUCTURE_EXTENSION);
+            }
             if (extensionPositions.length < extensionCount) {
                 for (let i = extensionPositions.length; i < extensionCount; i++) {
-                    this.room.createConstructionSite(extensionPositions[i].pos, STRUCTURE_EXTENSION);
+                    if (i % 2 === 0) {
+                        let targetPos = this.room.getPositionAt(extensionPositions[i].pos.x + 1, extensionPositions[i].pos.y);
+                        if (targetPos) {
+                            this.room.createConstructionSite(targetPos, STRUCTURE_EXTENSION);
+                        }
+                    }
+                    else {
+                        let targetPos = this.room.getPositionAt(extensionPositions[i].pos.x, extensionPositions[i].pos.y + 1);
+                        if (targetPos) {
+                            this.room.createConstructionSite(targetPos, STRUCTURE_EXTENSION);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    createSourceStructures() {
+        if (this.roomController && this.roomController.level > 1) {
+            let spawns = this.room.find(FIND_MY_SPAWNS);
+            let sources = this.roomSources;
+            for (let spawn of spawns) {
+                for (let source of sources) {
+                    if (!this.room.memory.sourcesMapped) {
+                        this.room.memory.sourcesMapped = [];
+                    }
+                    if (this.room.memory.sourcesMapped.indexOf(source.id) === -1) {
+                        let path = this.room.findPath(spawn.pos, source.pos, {
+                            maxOps: 100,
+                            ignoreCreeps: true,
+                            ignoreDestructibleStructures: true,
+                            swampCost: 1,
+                        });
+                        if (path.length > 0) {
+                            for (let i = 0; i < path.length - 2; i++) {
+                                this.room.createConstructionSite(path[i].x, path[i].y, STRUCTURE_ROAD);
+                            }
+                        }
+                        this.room.createConstructionSite(path[path.length - 2].x, path[path.length - 2].y, STRUCTURE_CONTAINER);
+                        this.room.memory.sourcesMapped.push(source.id);
+                    }
                 }
             }
         }
     }
     run() {
         // this.createExtensions();
+        this.createSourceStructures();
+        this.createExtensions();
     }
 }
 
 class RoomInstance {
     constructor(room, roomController = room.controller, roomEnergyAvailable = room.energyAvailable, roomEnergyCapacityAvailable = room.energyCapacityAvailable, roomSpawner = new SpawnerInstance(room), roomSources = room.find(FIND_SOURCES, {
         filter: (source) => !HelperFunctions.isHostileNearby(source),
-    }), roomCreeps = new CreepsInstance(room), roomMyConstructionSites = room.find(FIND_MY_CONSTRUCTION_SITES), roomMyStructures = new StructuresInstance(room, roomSources)) {
+    }), roomCreeps = new CreepsInstance(room), roomMyConstructionSites = room.find(FIND_MY_CONSTRUCTION_SITES), roomStructuresInstance = new StructuresInstance(room, roomSources)) {
         this.room = room;
         this.roomController = roomController;
         this.roomEnergyAvailable = roomEnergyAvailable;
@@ -3615,7 +3684,7 @@ class RoomInstance {
         this.roomSources = roomSources;
         this.roomCreeps = roomCreeps;
         this.roomMyConstructionSites = roomMyConstructionSites;
-        this.roomMyStructures = roomMyStructures;
+        this.roomStructuresInstance = roomStructuresInstance;
     }
     // roomTerminal = room.terminal;
     // roomStructures = room.find(FIND_STRUCTURES);
@@ -3640,7 +3709,8 @@ class RoomInstance {
         // Spawn harvesters
         if (this.roomController && this.roomController.level <= 3) {
             if (this.roomCreeps.harvesters.length < this.roomSources.length) {
-                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("harvester", this.roomCreeps.harvesters.length < 2 ? 10 : 21, this.findAvailableSources()[0]));
+                let targetSource = this.findAvailableSources()[0];
+                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("harvester", this.roomCreeps.harvesters.length < 2 ? 10 : 21, targetSource));
             }
             // Spawn upgraders
             if (this.roomCreeps.upgraders.length < this.roomController.level) {
@@ -3654,7 +3724,7 @@ class RoomInstance {
         }
         this.roomSpawner.run();
         this.roomCreeps.run();
-        this.roomMyStructures.run();
+        this.roomStructuresInstance.run();
         // this.roomTerminal.run();
         // this.roomStructures.run();
         // this.roomHostiles.run();

@@ -28,26 +28,8 @@ export class RoleHarvester {
       if (this.creep.memory.assigned_source) {
         var source = Game.getObjectById(this.creep.memory.assigned_source);
         if (source) {
-          if (!this.creep.memory.pathToSource) {
-            this.creep.memory.pathToSource = this.creep.room.findPath(
-              this.findClosestSpawn().pos,
-              source.pos,
-              {
-                maxOps: 100,
-                ignoreCreeps: true,
-                ignoreDestructibleStructures: true,
-                swampCost: 1,
-              }
-            );
-            this.createPathToSource(this.creep.memory.pathToSource);
-          }
-
           if (this.creep.harvest(source) == ERR_NOT_IN_RANGE) {
-            this.creep.moveTo(
-              this.creep.memory.pathToSource[0].x,
-              this.creep.memory.pathToSource[0].y
-            );
-            this.creep.moveByPath(this.creep.memory.pathToSource);
+            this.creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
           }
         }
       } else {

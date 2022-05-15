@@ -8,9 +8,8 @@ export class CreepsInstance {
     public creeps: Creep[] = room.find(FIND_MY_CREEPS),
     public harvesters: Creep[] = _.filter(creeps, (creep) => creep.memory.role == "harvester"),
     public upgraders: Creep[] = _.filter(creeps, (creep) => creep.memory.role == "upgrader"),
-    public builders: Creep[] = _.filter(creeps, (creep) => creep.memory.role == "builder")
-  ) // miners: Creep[] = _.filter(creeps, (creep) => creep.memory.role == 'miner');
-  // haulers: Creep[] = _.filter(creeps, (creep) => creep.memory.role == 'hauler');
+    public builders: Creep[] = _.filter(creeps, (creep) => creep.memory.role == "builder") // miners: Creep[] = _.filter(creeps, (creep) => creep.memory.role == 'miner');
+  ) // haulers: Creep[] = _.filter(creeps, (creep) => creep.memory.role == 'hauler');
   {}
 
   // make creep walk over road
