@@ -32,27 +32,43 @@ export class RoleBuilder {
     }
   }
 
+  getEnergyFromHarvester() {
+    const harvesters = this.creep.room.find(FIND_MY_CREEPS, {
+      filter: (creep) => creep.memory.role == "harvester",
+    });
+    if (harvesters.length > 0) {
+      if (!this.creep.pos.isNearTo(harvesters[0])) {
+        this.creep.moveTo(harvesters[0]);
+      }
+    }
+  }
   getEnergy() {
-    var storage = this.creep.room.find(FIND_MY_STRUCTURES, {
+    var storage = this.creep.room.find(FIND_STRUCTURES, {
       filter: (structure) => {
         return (
-          (structure.structureType == STRUCTURE_EXTENSION ||
-            structure.structureType == STRUCTURE_STORAGE ||
-            structure.structureType == STRUCTURE_SPAWN) &&
-          this.creep.room.energyAvailable > 200
+          (HelperFunctions.isContainer(structure) ||
+            HelperFunctions.isExtension(structure) ||
+            HelperFunctions.isSpawn(structure)) &&
+          structure.store[RESOURCE_ENERGY] > 200
         );
       },
     });
+    var sources = this.creep.room.find(FIND_SOURCES, {
+      filter: (source) => !HelperFunctions.isCreepNearby(source),
+    });
+    console.log(storage);
+
     if (storage.length > 0) {
       if (this.creep.withdraw(storage[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
         this.creep.moveTo(storage[0], { visualizePathStyle: { stroke: "#ffaa00" } });
       }
-    } else {
-      var sources = this.creep.room.find(FIND_SOURCES, {
-        filter: (source) => !HelperFunctions.isCreepNearby(source),
-      });
-      if (this.creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
-        this.creep.moveTo(sources[0], { visualizePathStyle: { stroke: "#ffaa00" } });
+    } else if (sources.length > 0) {
+      if (sources.length > 0) {
+        if (this.creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
+          this.creep.moveTo(sources[0], { visualizePathStyle: { stroke: "#ffaa00" } });
+        }
+      } else {
+        this.getEnergyFromHarvester();
       }
     }
   }

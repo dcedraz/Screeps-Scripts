@@ -1,3 +1,4 @@
+import { HelperFunctions } from "utils/HelperFunctions";
 export class RoleUpgrader {
   constructor(public creep: Creep) {}
 
@@ -19,12 +20,13 @@ export class RoleUpgrader {
         }
       }
     } else {
-      var sources = this.creep.room.find(FIND_MY_STRUCTURES, {
+      var sources = this.creep.room.find(FIND_STRUCTURES, {
         filter: (structure) => {
           return (
-            structure.structureType == STRUCTURE_EXTENSION ||
-            structure.structureType == STRUCTURE_STORAGE ||
-            (structure.structureType == STRUCTURE_SPAWN && structure.store[RESOURCE_ENERGY] > 0)
+            (HelperFunctions.isContainer(structure) ||
+              HelperFunctions.isExtension(structure) ||
+              HelperFunctions.isSpawn(structure)) &&
+            structure.store[RESOURCE_ENERGY] > 200
           );
         },
       });

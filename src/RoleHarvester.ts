@@ -2,6 +2,47 @@ import { HelperFunctions } from "utils/HelperFunctions";
 export class RoleHarvester {
   constructor(public creep: Creep) {}
 
+  repairNerbyContainer() {
+    let containers = this.creep.pos.findInRange(FIND_STRUCTURES, 1, {
+      filter: (structure) =>
+        structure.structureType == STRUCTURE_CONTAINER && structure.hits < structure.hitsMax,
+    });
+    if (containers.length > 0) {
+      this.creep.repair(containers[0]);
+    }
+  }
+
+  sortStorageTargetsByType(): Structure[] {
+    let targets = this.creep.room.find(FIND_STRUCTURES, {
+      filter: (structure: Structure) => {
+        return (
+          (HelperFunctions.isExtension(structure) ||
+            HelperFunctions.isContainer(structure) ||
+            HelperFunctions.isSpawn(structure)) &&
+          structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+        );
+      },
+    });
+
+    var sortedTargets: Structure[] = [];
+    for (let i = 0; i < targets.length; i++) {
+      if (HelperFunctions.isSpawn(targets[i])) {
+        sortedTargets.push(targets[i]);
+      }
+    }
+    for (let i = 0; i < targets.length; i++) {
+      if (HelperFunctions.isExtension(targets[i])) {
+        sortedTargets.push(targets[i]);
+      }
+    }
+    for (let i = 0; i < targets.length; i++) {
+      if (HelperFunctions.isContainer(targets[i])) {
+        sortedTargets.push(targets[i]);
+      }
+    }
+    return sortedTargets;
+  }
+
   findClosestSpawn(): StructureSpawn {
     let spawn = this.creep.pos.findClosestByPath(FIND_MY_SPAWNS);
     if (spawn) {
@@ -23,7 +64,21 @@ export class RoleHarvester {
     );
   }
 
+  giveEnergyToNerbyBuilder() {
+    let builders = this.creep.pos.findInRange(FIND_MY_CREEPS, 1, {
+      filter: (creep) => creep.memory.role === "builder" || creep.memory.role === "upgrader",
+    });
+    if (builders.length > 0) {
+      this.creep.transfer(builders[0], RESOURCE_ENERGY);
+    }
+  }
+
   runInitial() {
+    if (this.creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+      this.repairNerbyContainer();
+      this.giveEnergyToNerbyBuilder();
+    }
+
     if (this.creep.store.getFreeCapacity() > 0) {
       if (this.creep.memory.assigned_source) {
         var source = Game.getObjectById(this.creep.memory.assigned_source);
@@ -39,16 +94,7 @@ export class RoleHarvester {
         }
       }
     } else {
-      var targets = this.creep.room.find(FIND_STRUCTURES, {
-        filter: (structure: Structure) => {
-          return (
-            (HelperFunctions.isExtension(structure) ||
-              HelperFunctions.isContainer(structure) ||
-              HelperFunctions.isSpawn(structure)) &&
-            structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-          );
-        },
-      });
+      var targets = this.sortStorageTargetsByType();
       if (targets.length > 0) {
         if (this.creep.transfer(targets[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
           this.creep.moveTo(targets[0], { visualizePathStyle: { stroke: "#ffffff" } });

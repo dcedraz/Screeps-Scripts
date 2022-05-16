@@ -3393,6 +3393,41 @@ class RoleHarvester {
     constructor(creep) {
         this.creep = creep;
     }
+    repairNerbyContainer() {
+        let containers = this.creep.pos.findInRange(FIND_STRUCTURES, 1, {
+            filter: (structure) => structure.structureType == STRUCTURE_CONTAINER && structure.hits < structure.hitsMax,
+        });
+        if (containers.length > 0) {
+            this.creep.repair(containers[0]);
+        }
+    }
+    sortStorageTargetsByType() {
+        let targets = this.creep.room.find(FIND_STRUCTURES, {
+            filter: (structure) => {
+                return ((HelperFunctions.isExtension(structure) ||
+                    HelperFunctions.isContainer(structure) ||
+                    HelperFunctions.isSpawn(structure)) &&
+                    structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
+            },
+        });
+        var sortedTargets = [];
+        for (let i = 0; i < targets.length; i++) {
+            if (HelperFunctions.isSpawn(targets[i])) {
+                sortedTargets.push(targets[i]);
+            }
+        }
+        for (let i = 0; i < targets.length; i++) {
+            if (HelperFunctions.isExtension(targets[i])) {
+                sortedTargets.push(targets[i]);
+            }
+        }
+        for (let i = 0; i < targets.length; i++) {
+            if (HelperFunctions.isContainer(targets[i])) {
+                sortedTargets.push(targets[i]);
+            }
+        }
+        return sortedTargets;
+    }
     findClosestSpawn() {
         let spawn = this.creep.pos.findClosestByPath(FIND_MY_SPAWNS);
         if (spawn) {
@@ -3408,7 +3443,19 @@ class RoleHarvester {
         }
         this.creep.room.createConstructionSite(path[path.length - 2].x, path[path.length - 2].y, STRUCTURE_CONTAINER);
     }
+    giveEnergyToNerbyBuilder() {
+        let builders = this.creep.pos.findInRange(FIND_MY_CREEPS, 1, {
+            filter: (creep) => creep.memory.role === "builder" || creep.memory.role === "upgrader",
+        });
+        if (builders.length > 0) {
+            this.creep.transfer(builders[0], RESOURCE_ENERGY);
+        }
+    }
     runInitial() {
+        if (this.creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+            this.repairNerbyContainer();
+            this.giveEnergyToNerbyBuilder();
+        }
         if (this.creep.store.getFreeCapacity() > 0) {
             if (this.creep.memory.assigned_source) {
                 var source = Game.getObjectById(this.creep.memory.assigned_source);
@@ -3426,14 +3473,7 @@ class RoleHarvester {
             }
         }
         else {
-            var targets = this.creep.room.find(FIND_STRUCTURES, {
-                filter: (structure) => {
-                    return ((HelperFunctions.isExtension(structure) ||
-                        HelperFunctions.isContainer(structure) ||
-                        HelperFunctions.isSpawn(structure)) &&
-                        structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
-                },
-            });
+            var targets = this.sortStorageTargetsByType();
             if (targets.length > 0) {
                 if (this.creep.transfer(targets[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
                     this.creep.moveTo(targets[0], { visualizePathStyle: { stroke: "#ffffff" } });
@@ -3477,26 +3517,42 @@ class RoleBuilder {
             }
         }
     }
+    getEnergyFromHarvester() {
+        const harvesters = this.creep.room.find(FIND_MY_CREEPS, {
+            filter: (creep) => creep.memory.role == "harvester",
+        });
+        if (harvesters.length > 0) {
+            if (!this.creep.pos.isNearTo(harvesters[0])) {
+                this.creep.moveTo(harvesters[0]);
+            }
+        }
+    }
     getEnergy() {
-        var storage = this.creep.room.find(FIND_MY_STRUCTURES, {
+        var storage = this.creep.room.find(FIND_STRUCTURES, {
             filter: (structure) => {
-                return ((structure.structureType == STRUCTURE_EXTENSION ||
-                    structure.structureType == STRUCTURE_STORAGE ||
-                    structure.structureType == STRUCTURE_SPAWN) &&
-                    this.creep.room.energyAvailable > 200);
+                return ((HelperFunctions.isContainer(structure) ||
+                    HelperFunctions.isExtension(structure) ||
+                    HelperFunctions.isSpawn(structure)) &&
+                    structure.store[RESOURCE_ENERGY] > 200);
             },
         });
+        var sources = this.creep.room.find(FIND_SOURCES, {
+            filter: (source) => !HelperFunctions.isCreepNearby(source),
+        });
+        console.log(storage);
         if (storage.length > 0) {
             if (this.creep.withdraw(storage[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
                 this.creep.moveTo(storage[0], { visualizePathStyle: { stroke: "#ffaa00" } });
             }
         }
-        else {
-            var sources = this.creep.room.find(FIND_SOURCES, {
-                filter: (source) => !HelperFunctions.isCreepNearby(source),
-            });
-            if (this.creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
-                this.creep.moveTo(sources[0], { visualizePathStyle: { stroke: "#ffaa00" } });
+        else if (sources.length > 0) {
+            if (sources.length > 0) {
+                if (this.creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
+                    this.creep.moveTo(sources[0], { visualizePathStyle: { stroke: "#ffaa00" } });
+                }
+            }
+            else {
+                this.getEnergyFromHarvester();
             }
         }
     }
@@ -3541,11 +3597,12 @@ class RoleUpgrader {
             }
         }
         else {
-            var sources = this.creep.room.find(FIND_MY_STRUCTURES, {
+            var sources = this.creep.room.find(FIND_STRUCTURES, {
                 filter: (structure) => {
-                    return (structure.structureType == STRUCTURE_EXTENSION ||
-                        structure.structureType == STRUCTURE_STORAGE ||
-                        (structure.structureType == STRUCTURE_SPAWN && structure.store[RESOURCE_ENERGY] > 0));
+                    return ((HelperFunctions.isContainer(structure) ||
+                        HelperFunctions.isExtension(structure) ||
+                        HelperFunctions.isSpawn(structure)) &&
+                        structure.store[RESOURCE_ENERGY] > 200);
                 },
             });
             if (sources.length > 0) {
@@ -3755,7 +3812,7 @@ class RoomInstance {
                 this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("upgrader", 20));
             }
             // Spawn builders
-            if (this.roomCreeps.builders.length < 1 && this.roomController.level > 1) {
+            if (this.roomCreeps.builders.length < 2 && this.roomController.level > 1) {
                 this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("builder", this.roomCreeps.builders.length < 1 ? 10 : 21));
             }
         }
