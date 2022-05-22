@@ -74,18 +74,6 @@ export const loop = ErrorMapper.wrapLoop(() => {
     }
   }
 
-  Object.defineProperty(Room.prototype, "containers", {
-    get: function () {
-      if (this._containers) {
-        return this._containers;
-      }
-      this._containers = this.find(FIND_STRUCTURES, {
-        filter: (struct: { structureType: string }) => struct.structureType === STRUCTURE_CONTAINER,
-      });
-      return this._containers;
-    },
-  });
-
   // Towers logic
   const towers = _.filter(
     Game.structures,
