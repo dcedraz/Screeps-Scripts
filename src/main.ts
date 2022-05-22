@@ -56,6 +56,36 @@ export const loop = ErrorMapper.wrapLoop(() => {
     }
   }
 
+  // Print out stats every 100 ticks
+  if (Game.time % 10 === 0) {
+    for (const room in Game.rooms) {
+      if (Game.rooms[room].controller) {
+        console.log(`Tick: ${Game.time}`);
+        console.log(`CPU used: ${Game.cpu.getUsed().toFixed(3)}`);
+        console.log(`CPU limit: ${Game.cpu.limit}`);
+        console.log(`CPU bucket: ${Game.cpu.bucket}`);
+        console.log(
+          `Energy: ${Game.rooms[room].energyAvailable}/${Game.rooms[room].energyCapacityAvailable}`
+        );
+        console.log(
+          `GCL: ${Game.gcl.level}, progress: ${Game.gcl.progress}, progressTotal: ${Game.gcl.progressTotal}`
+        );
+      }
+    }
+  }
+
+  Object.defineProperty(Room.prototype, "containers", {
+    get: function () {
+      if (this._containers) {
+        return this._containers;
+      }
+      this._containers = this.find(FIND_STRUCTURES, {
+        filter: (struct: { structureType: string }) => struct.structureType === STRUCTURE_CONTAINER,
+      });
+      return this._containers;
+    },
+  });
+
   // Towers logic
   const towers = _.filter(
     Game.structures,

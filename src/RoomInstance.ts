@@ -28,8 +28,7 @@ export class RoomInstance {
     if (
       this.roomController &&
       this.roomController.level > 1 &&
-      this.roomController.safeMode &&
-      this.roomController.safeMode < 1000 &&
+      (!this.roomController.safeMode || this.roomController.safeMode < 1000) &&
       this.roomController.safeModeCooldown === undefined
     ) {
       this.roomController.activateSafeMode();
@@ -49,7 +48,7 @@ export class RoomInstance {
     this.runSafeMode();
 
     // Spawn harvesters
-    if (this.roomController && this.roomController.level <= 3) {
+    if (this.roomController) {
       if (this.roomCreeps.harvesters.length < this.roomSources.length) {
         let targetSource = this.findAvailableSources()[0];
         this.roomSpawner.spawnQueueAdd(
@@ -62,12 +61,12 @@ export class RoomInstance {
       }
 
       // Spawn upgraders
-      if (this.roomCreeps.upgraders.length < 1) {
+      if (this.roomCreeps.upgraders.length < 2) {
         this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("upgrader", 20));
       }
 
       // Spawn builders
-      if (this.roomCreeps.builders.length < 2 && this.roomController.level > 1) {
+      if (this.roomCreeps.builders.length < 1 && this.roomController.level > 1) {
         this.roomSpawner.spawnQueueAdd(
           this.roomCreeps.newInitialCreep("builder", this.roomCreeps.builders.length < 1 ? 10 : 21)
         );
