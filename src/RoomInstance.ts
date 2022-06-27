@@ -2,6 +2,7 @@ import { SpawnerInstance } from "SpawnerInstance";
 import { CreepsInstance } from "CreepsInstance";
 import { StructuresInstance } from "StructuresInstance";
 import { HelperFunctions } from "utils/HelperFunctions";
+import { CostMatrix } from "utils/CostMatrix";
 
 export class RoomInstance {
   constructor(
@@ -76,6 +77,8 @@ export class RoomInstance {
     this.roomSpawner.run();
     this.roomCreeps.run();
     this.roomStructuresInstance.run();
+    CostMatrix.getCostMatrix(this.room);
+
     // this.roomTerminal.run();
     // this.roomStructures.run();
     // this.roomHostiles.run();

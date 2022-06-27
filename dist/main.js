@@ -3348,26 +3348,6 @@ class HelperFunctions {
     static printObjectById(id) {
         console.log(JSON.stringify(Game.getObjectById(id), undefined, 4));
     }
-    static getExtensionCount(level) {
-        switch (level) {
-            case 2:
-                return 5;
-            case 3:
-                return 10;
-            case 4:
-                return 20;
-            case 5:
-                return 30;
-            case 6:
-                return 40;
-            case 7:
-                return 50;
-            case 8:
-                return 60;
-            default:
-                return 0;
-        }
-    }
     // check for hostile nearby
     static isHostileNearby(structure) {
         var hostile = structure.pos.findInRange(FIND_HOSTILE_CREEPS, 5);
@@ -3666,7 +3646,8 @@ class StructuresInstance {
     }
     createExtensions() {
         if (this.roomController && this.roomController.level > 1) {
-            let extensionCount = HelperFunctions.getExtensionCount(this.roomController.level);
+            let extensionCount = CONTROLLER_STRUCTURES.extension[this.roomController.level];
+            console.log(`Extension count: ${extensionCount}`);
             let extensionsToBuild = this.room.find(FIND_CONSTRUCTION_SITES, {
                 filter: (structure) => structure.structureType === STRUCTURE_EXTENSION,
             });
@@ -3764,6 +3745,77 @@ class StructuresInstance {
     }
 }
 
+class CostMatrix {
+    constructor() {
+        this.matrix = [];
+    }
+    static getCostMatrix(room) {
+        console.log("running");
+        let matrix = new CostMatrix();
+        let sources = room.find(FIND_SOURCES);
+        let structures = room.find(FIND_STRUCTURES);
+        let creeps = room.find(FIND_MY_CREEPS);
+        for (let source of sources) {
+            matrix.set(source.pos.x, source.pos.y, 1);
+        }
+        for (let structure of structures) {
+            if (structure.structureType === STRUCTURE_ROAD) {
+                matrix.set(structure.pos.x, structure.pos.y, 1);
+            }
+            else if (structure.structureType === STRUCTURE_CONTAINER) {
+                matrix.set(structure.pos.x, structure.pos.y, 5);
+            }
+            else if (structure.structureType === STRUCTURE_RAMPART) {
+                matrix.set(structure.pos.x, structure.pos.y, 255);
+            }
+            else if (structure.structureType !== STRUCTURE_WALL) {
+                matrix.set(structure.pos.x, structure.pos.y, 255);
+            }
+        }
+        for (let creep of creeps) {
+            matrix.set(creep.pos.x, creep.pos.y, 255);
+        }
+        console.log(matrix.serialize());
+        matrix.visualize(room);
+        return matrix;
+    }
+    // create visual for each position in the matrix
+    visualize(room) {
+        for (let y = 0; y < 50; y++) {
+            for (let x = 0; x < 50; x++) {
+                let value = this.matrix[y * 50 + x];
+                if (value === 255) {
+                    Game.rooms[room.name].visual.circle(x, y, {
+                        fill: "red",
+                        radius: 0.1,
+                    });
+                }
+                else if (value === 1) {
+                    Game.rooms[room.name].visual.circle(x, y, {
+                        fill: "green",
+                        radius: 0.1,
+                    });
+                }
+                else if (value === 5) {
+                    Game.rooms[room.name].visual.circle(x, y, {
+                        fill: "blue",
+                        radius: 0.1,
+                    });
+                }
+            }
+        }
+    }
+    set(x, y, cost) {
+        this.matrix[y * 50 + x] = cost;
+    }
+    get(x, y) {
+        return this.matrix[y * 50 + x];
+    }
+    serialize() {
+        return this.matrix.join(",");
+    }
+}
+
 class RoomInstance {
     constructor(room, roomController = room.controller, roomSpawner = new SpawnerInstance(room), roomSources = room.find(FIND_SOURCES, {
         filter: (source) => !HelperFunctions.isHostileNearby(source),
@@ -3814,6 +3866,7 @@ class RoomInstance {
         this.roomSpawner.run();
         this.roomCreeps.run();
         this.roomStructuresInstance.run();
+        CostMatrix.getCostMatrix(this.room);
         // this.roomTerminal.run();
         // this.roomStructures.run();
         // this.roomHostiles.run();

@@ -1,3 +1,4 @@
+import { constants } from "buffer";
 import { HelperFunctions } from "utils/HelperFunctions";
 
 export class StructuresInstance {
@@ -10,7 +11,8 @@ export class StructuresInstance {
 
   createExtensions(): void {
     if (this.roomController && this.roomController.level > 1) {
-      let extensionCount = HelperFunctions.getExtensionCount(this.roomController.level);
+      let extensionCount = CONTROLLER_STRUCTURES.extension[this.roomController.level];
+      console.log(`Extension count: ${extensionCount}`);
 
       let extensionsToBuild = this.room.find(FIND_CONSTRUCTION_SITES, {
         filter: (structure) => structure.structureType === STRUCTURE_EXTENSION,
