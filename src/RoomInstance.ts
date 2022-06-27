@@ -77,8 +77,6 @@ export class RoomInstance {
     this.roomSpawner.run();
     this.roomCreeps.run();
     this.roomStructuresInstance.run();
-    CostMatrix.getCostMatrix(this.room);
-
     // this.roomTerminal.run();
     // this.roomStructures.run();
     // this.roomHostiles.run();
