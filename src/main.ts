@@ -1,5 +1,6 @@
 import { ErrorMapper } from "utils/ErrorMapper";
 import { RoomInstance } from "RoomInstance";
+import { Hash } from "crypto";
 
 declare global {
   /*
@@ -25,6 +26,9 @@ declare global {
   }
 
   interface RoomMemory {
+    roomCostMatrix: any;
+    roomPositions: any;
+    baseLayoutCalculated: boolean;
     sourcesMapped: Id<Source>[];
   }
 

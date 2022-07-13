@@ -2,7 +2,6 @@ import { SpawnerInstance } from "SpawnerInstance";
 import { CreepsInstance } from "CreepsInstance";
 import { StructuresInstance } from "StructuresInstance";
 import { HelperFunctions } from "utils/HelperFunctions";
-import { CostMatrix } from "utils/CostMatrix";
 
 export class RoomInstance {
   constructor(
