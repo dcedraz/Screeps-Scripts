@@ -99,4 +99,9 @@ export class CostMatrix {
   deserialize(str: string): void {
     this.matrix = str.split(",").map((v) => parseInt(v));
   }
+
+  reset(): void {
+    this.matrix = [];
+    delete this.r.memory.roomCostMatrix;
+  }
 }

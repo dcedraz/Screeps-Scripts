@@ -80,4 +80,18 @@ export class HelperFunctions {
       }
     };
   };
+
+  public static emptyBaseStructures(): BaseStructures {
+    return {
+      spawns: [],
+      storage: [],
+      links: [],
+      containers: [],
+      towers: [],
+      roads: [],
+      extensions: [],
+      walls: [],
+      ramparts: [],
+    };
+  }
 }

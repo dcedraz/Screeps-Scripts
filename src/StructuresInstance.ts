@@ -8,20 +8,10 @@ export class StructuresInstance {
     public roomController: StructureController | undefined = r.controller,
     public myConstructionSites: ConstructionSite[] = r.find(FIND_CONSTRUCTION_SITES),
     public roomCostMaxtrix: CostMatrix = new CostMatrix(r),
-    public roomPositions = {
-      spawns: Array<RoomPosition>(),
-      extensions: Array<RoomPosition>(),
-      containers: Array<RoomPosition>(),
-      towers: Array<RoomPosition>(),
-      links: Array<RoomPosition>(),
-      storage: Array<RoomPosition>(),
-      roads: Array<RoomPosition>(),
-      walls: Array<RoomPosition>(),
-      ramparts: Array<RoomPosition>(),
-    }
+    public roomPositions: BaseStructures = HelperFunctions.emptyBaseStructures()
   ) {
     this.sortConstructionSites();
-    this.createExtensions();
+    this.buildRoomPositions();
     this.createSourceStructures();
     this.runMemoized();
   }
@@ -249,7 +239,44 @@ export class StructuresInstance {
             }
           }
         }
-        this.r.memory.baseLayoutCalculated = false;
+      }
+    }
+  }
+
+  // Build structures in room positions
+  buildRoomPositions(): void {
+    if (this.roomController && this.roomController.level > 1) {
+      let failedRoomPositions = HelperFunctions.emptyBaseStructures();
+      this.buildStructures(this.roomPositions.spawns, STRUCTURE_SPAWN, failedRoomPositions.spawns);
+      this.buildStructures(
+        this.roomPositions.storage,
+        STRUCTURE_STORAGE,
+        failedRoomPositions.storage
+      );
+      this.buildStructures(this.roomPositions.links, STRUCTURE_LINK, failedRoomPositions.links);
+      this.buildStructures(this.roomPositions.towers, STRUCTURE_TOWER, failedRoomPositions.towers);
+      this.buildStructures(this.roomPositions.roads, STRUCTURE_ROAD, failedRoomPositions.roads);
+      this.buildStructures(
+        this.roomPositions.extensions,
+        STRUCTURE_EXTENSION,
+        failedRoomPositions.extensions
+      );
+      //reset costmatrix memory
+      this.roomCostMaxtrix.reset();
+      // TODO implement a retry to build the failed structures
+    }
+  }
+
+  buildStructures(
+    structsArray: RoomPosition[],
+    structure: StructureConstant,
+    failArray: RoomPosition[]
+  ): void {
+    for (const pos of structsArray) {
+      if (this.roomCostMaxtrix.get(pos.x, pos.y) === 1) {
+        this.r.createConstructionSite(pos, structure);
+      } else {
+        failArray.push(pos);
       }
     }
   }
@@ -284,7 +311,6 @@ export class StructuresInstance {
             );
 
             this.r.memory.sourcesMapped.push(source.id);
-            this.r.memory.baseLayoutCalculated = false;
           }
         }
       }
