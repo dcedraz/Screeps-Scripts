@@ -4,7 +4,10 @@ export class SpawnerInstance {
     public spawns: StructureSpawn[] = room.find(FIND_MY_SPAWNS),
     public spawnQueue: SpawnWorkOrder[] = []
   ) {
-    if (this.spawnQueue.length) {
+  }
+
+  run() {
+        if (this.spawnQueue.length) {
       //this.debuggQueue("BEFORE");  
       this.spawnQueueSort();
       //this.debuggQueue("AFTER");

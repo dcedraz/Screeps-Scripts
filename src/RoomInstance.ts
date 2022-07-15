@@ -73,6 +73,7 @@ export class RoomInstance {
       }
     }
     this.roomCreeps.run();
+    this.roomSpawner.run();
     // this.roomTerminal.run();
     // this.roomStructures.run();
     // this.roomHostiles.run();

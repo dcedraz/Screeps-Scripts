@@ -101,6 +101,7 @@ export class CostMatrix {
   }
 
   reset(): void {
+    console.log("Reset cost matrix for room: ", this.r.name);
     this.matrix = [];
     delete this.r.memory.roomCostMatrix;
   }

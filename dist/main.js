@@ -3245,24 +3245,18 @@ class SpawnerInstance {
     }
     run() {
         if (this.spawnQueue.length) {
-            // Debugging
-            //   this.spawnQueue.forEach((spawnRequest) => {
-            //     console.log(
-            //       "BEFORE: " +
-            //         JSON.stringify(spawnRequest.name + " - " + spawnRequest.priority, undefined, 4)
-            //     );
-            //   });
+            //this.debuggQueue("BEFORE");  
             this.spawnQueueSort();
-            // Debugging
-            //   this.spawnQueue.forEach((spawnRequest) => {
-            //     console.log(
-            //       "AFTER: " +
-            //         JSON.stringify(spawnRequest.name + " - " + spawnRequest.priority, undefined, 4)
-            //     );
-            //   });
+            //this.debuggQueue("AFTER");
             this.spawnCreeps();
             this.spawnVisuals();
         }
+    }
+    debuggQueue(text) {
+        this.spawnQueue.forEach((spawnRequest) => {
+            console.log(text + ": " +
+                JSON.stringify(spawnRequest.name + " - " + spawnRequest.priority, undefined, 4));
+        });
     }
     // Spawn visuals
     spawnVisuals() {
@@ -3364,6 +3358,19 @@ class HelperFunctions {
         }
         return false;
     }
+    static emptyBaseStructures() {
+        return {
+            spawns: [],
+            storage: [],
+            links: [],
+            containers: [],
+            towers: [],
+            roads: [],
+            extensions: [],
+            walls: [],
+            ramparts: [],
+        };
+    }
 }
 HelperFunctions.findCarryPartsRequired = function (distance, income) {
     return (distance * 2 * income) / CARRY_CAPACITY;
@@ -3393,11 +3400,11 @@ HelperFunctions.memoizeRoomPositions = (fn, r) => {
     return (...args) => {
         let n = args[0];
         if (n in r.memory.roomPositions) {
-            console.log("Fetching RoomPositions from memory");
+            // console.log("Fetching RoomPositions from memory");
             return r.memory.roomPositions[n];
         }
         else {
-            console.log("Calculating RoomPositions for room: ", n);
+            // console.log("Calculating RoomPositions for room: ", n);
             let result = fn(n);
             r.memory.roomPositions[n] = result;
             return result;
@@ -3768,20 +3775,15 @@ class CostMatrix {
     deserialize(str) {
         this.matrix = str.split(",").map((v) => parseInt(v));
     }
+    reset() {
+        console.log("Reset cost matrix for room: ", this.r.name);
+        this.matrix = [];
+        delete this.r.memory.roomCostMatrix;
+    }
 }
 
 class StructuresInstance {
-    constructor(r, roomSources, roomController = r.controller, myConstructionSites = r.find(FIND_CONSTRUCTION_SITES), roomCostMaxtrix = new CostMatrix(r), roomPositions = {
-        spawns: Array(),
-        extensions: Array(),
-        containers: Array(),
-        towers: Array(),
-        links: Array(),
-        storage: Array(),
-        roads: Array(),
-        walls: Array(),
-        ramparts: Array(),
-    }) {
+    constructor(r, roomSources, roomController = r.controller, myConstructionSites = r.find(FIND_CONSTRUCTION_SITES), roomCostMaxtrix = new CostMatrix(r), roomPositions = HelperFunctions.emptyBaseStructures()) {
         this.r = r;
         this.roomSources = roomSources;
         this.roomController = roomController;
@@ -3789,12 +3791,17 @@ class StructuresInstance {
         this.roomCostMaxtrix = roomCostMaxtrix;
         this.roomPositions = roomPositions;
         this.runMemoized();
+        this.sortConstructionSites();
+        this.buildRoomPositions();
+        this.createSourceStructures();
     }
     runMemoized() {
         const memoizedcalcRoomPositions = HelperFunctions.memoizeRoomPositions(this.calcRoomPositions.bind(this), this.r);
         this.roomPositions = memoizedcalcRoomPositions(this.r.name);
+        // this.createVisuals();
     }
     calcRoomPositions() {
+        console.log(`Calculating room positions for ${this.r.name}`);
         // Calculate Spawn positions
         const initialSpawn = this.r.find(FIND_MY_SPAWNS)[0];
         const initialX = initialSpawn.pos.x;
@@ -3988,35 +3995,70 @@ class StructuresInstance {
                         }
                     }
                 }
-                this.r.memory.baseLayoutCalculated = false;
             }
+        }
+    }
+    // Build structures in room positions
+    buildRoomPositions() {
+        if (this.roomController &&
+            this.roomController.level > 1 &&
+            !this.r.memory.roomBaseConstructed) {
+            let failedRoomPositions = HelperFunctions.emptyBaseStructures();
+            this.buildArrayStructures(this.roomPositions.spawns, STRUCTURE_SPAWN, failedRoomPositions.spawns);
+            this.buildArrayStructures(this.roomPositions.storage, STRUCTURE_STORAGE, failedRoomPositions.storage);
+            this.buildArrayStructures(this.roomPositions.links, STRUCTURE_LINK, failedRoomPositions.links);
+            this.buildArrayStructures(this.roomPositions.towers, STRUCTURE_TOWER, failedRoomPositions.towers);
+            this.buildArrayStructures(this.roomPositions.roads, STRUCTURE_ROAD, failedRoomPositions.roads);
+            this.buildArrayStructures(this.roomPositions.extensions, STRUCTURE_EXTENSION, failedRoomPositions.extensions);
+            //reset costmatrix memory
+            this.roomCostMaxtrix.reset();
+            this.r.memory.roomBaseConstructed = true;
+            // TODO implement a retry to build the failed structures
+        }
+    }
+    buildArrayStructures(structsArray, structure, failArray) {
+        for (const pos of structsArray) {
+            if (this.roomCostMaxtrix.get(pos.x, pos.y) != 255) {
+                this.r.createConstructionSite(pos.x, pos.y, structure);
+            }
+            else {
+                console.log("Failed to build " + structure + " at " + pos);
+                failArray.push(pos);
+            }
+        }
+    }
+    matrixedCSite(x, y, structureType) {
+        if (this.roomCostMaxtrix.get(x, y) != 255) {
+            this.r.createConstructionSite(x, y, structureType);
+        }
+        else {
+            console.log("Failed to build structure at " + x + "," + y);
         }
     }
     createSourceStructures() {
         if (this.roomController && this.roomController.level > 1) {
-            let spawns = this.r.find(FIND_MY_SPAWNS);
+            let spawn = this.r.find(FIND_MY_SPAWNS)[0];
+            let initialPos = this.r.getPositionAt(spawn.pos.x + 4, spawn.pos.y);
             let sources = this.roomSources;
-            for (let spawn of spawns) {
-                for (let source of sources) {
-                    if (!this.r.memory.sourcesMapped) {
-                        this.r.memory.sourcesMapped = [];
-                    }
-                    if (this.r.memory.sourcesMapped.indexOf(source.id) === -1) {
-                        let path = this.r.findPath(spawn.pos, source.pos, {
-                            maxOps: 100,
-                            ignoreCreeps: true,
-                            ignoreDestructibleStructures: true,
-                            swampCost: 1,
-                        });
-                        if (path.length > 0) {
-                            for (let i = 0; i < path.length - 2; i++) {
-                                this.r.createConstructionSite(path[i].x, path[i].y, STRUCTURE_ROAD);
-                            }
+            for (let source of sources) {
+                if (!this.r.memory.sourcesMapped) {
+                    this.r.memory.sourcesMapped = [];
+                }
+                if (this.r.memory.sourcesMapped.indexOf(source.id) === -1 && initialPos) {
+                    let path = this.r.findPath(initialPos, source.pos, {
+                        maxOps: 100,
+                        ignoreCreeps: true,
+                        ignoreDestructibleStructures: true,
+                        swampCost: 1,
+                    });
+                    if (path.length > 0) {
+                        for (let i = 0; i < path.length - 2; i++) {
+                            this.matrixedCSite(path[i].x, path[i].y, STRUCTURE_ROAD);
                         }
-                        this.r.createConstructionSite(path[path.length - 2].x, path[path.length - 2].y, STRUCTURE_CONTAINER);
-                        this.r.memory.sourcesMapped.push(source.id);
-                        this.r.memory.baseLayoutCalculated = false;
                     }
+                    this.matrixedCSite(path[path.length - 2].x, path[path.length - 2].y, STRUCTURE_CONTAINER);
+                    this.r.memory.sourcesMapped.push(source.id);
+                    this.roomCostMaxtrix.reset();
                 }
             }
         }
@@ -4052,12 +4094,6 @@ class StructuresInstance {
             }
         }
         this.myConstructionSites = sortedSites;
-    }
-    run() {
-        this.sortConstructionSites();
-        this.createExtensions();
-        this.createSourceStructures();
-        this.createVisuals();
     }
 }
 
@@ -4108,9 +4144,8 @@ class RoomInstance {
                 this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("builder", this.roomCreeps.builders.length < 1 ? 10 : 21));
             }
         }
-        this.roomSpawner.run();
         this.roomCreeps.run();
-        this.roomStructuresInstance.run();
+        this.roomSpawner.run();
         // this.roomTerminal.run();
         // this.roomStructures.run();
         // this.roomHostiles.run();

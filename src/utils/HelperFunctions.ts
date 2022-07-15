@@ -70,10 +70,10 @@ export class HelperFunctions {
     return (...args: any[]) => {
       let n = args[0];
       if (n in r.memory.roomPositions) {
-        console.log("Fetching RoomPositions from memory");
+        // console.log("Fetching RoomPositions from memory");
         return r.memory.roomPositions[n];
       } else {
-        console.log("Calculating RoomPositions for room: ", n);
+        // console.log("Calculating RoomPositions for room: ", n);
         let result = fn(n);
         r.memory.roomPositions[n] = result;
         return result;

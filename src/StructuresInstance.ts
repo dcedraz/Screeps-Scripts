@@ -10,10 +10,10 @@ export class StructuresInstance {
     public roomCostMaxtrix: CostMatrix = new CostMatrix(r),
     public roomPositions: BaseStructures = HelperFunctions.emptyBaseStructures()
   ) {
+    this.runMemoized();
     this.sortConstructionSites();
     this.buildRoomPositions();
     this.createSourceStructures();
-    this.runMemoized();
   }
 
   runMemoized(): void {
@@ -22,7 +22,7 @@ export class StructuresInstance {
       this.r
     );
     this.roomPositions = memoizedcalcRoomPositions(this.r.name);
-    this.createVisuals();
+    // this.createVisuals();
   }
 
   calcRoomPositions(): Object {
@@ -245,73 +245,98 @@ export class StructuresInstance {
 
   // Build structures in room positions
   buildRoomPositions(): void {
-    if (this.roomController && this.roomController.level > 1) {
+    if (
+      this.roomController &&
+      this.roomController.level > 1 &&
+      !this.r.memory.roomBaseConstructed
+    ) {
       let failedRoomPositions = HelperFunctions.emptyBaseStructures();
-      this.buildStructures(this.roomPositions.spawns, STRUCTURE_SPAWN, failedRoomPositions.spawns);
-      this.buildStructures(
+      this.buildArrayStructures(
+        this.roomPositions.spawns,
+        STRUCTURE_SPAWN,
+        failedRoomPositions.spawns
+      );
+      this.buildArrayStructures(
         this.roomPositions.storage,
         STRUCTURE_STORAGE,
         failedRoomPositions.storage
       );
-      this.buildStructures(this.roomPositions.links, STRUCTURE_LINK, failedRoomPositions.links);
-      this.buildStructures(this.roomPositions.towers, STRUCTURE_TOWER, failedRoomPositions.towers);
-      this.buildStructures(this.roomPositions.roads, STRUCTURE_ROAD, failedRoomPositions.roads);
-      this.buildStructures(
+      this.buildArrayStructures(
+        this.roomPositions.links,
+        STRUCTURE_LINK,
+        failedRoomPositions.links
+      );
+      this.buildArrayStructures(
+        this.roomPositions.towers,
+        STRUCTURE_TOWER,
+        failedRoomPositions.towers
+      );
+      this.buildArrayStructures(
+        this.roomPositions.roads,
+        STRUCTURE_ROAD,
+        failedRoomPositions.roads
+      );
+      this.buildArrayStructures(
         this.roomPositions.extensions,
         STRUCTURE_EXTENSION,
         failedRoomPositions.extensions
       );
       //reset costmatrix memory
       this.roomCostMaxtrix.reset();
+      this.r.memory.roomBaseConstructed = true;
       // TODO implement a retry to build the failed structures
     }
   }
 
-  buildStructures(
+  buildArrayStructures(
     structsArray: RoomPosition[],
-    structure: StructureConstant,
+    structure: BuildableStructureConstant,
     failArray: RoomPosition[]
   ): void {
     for (const pos of structsArray) {
-      if (this.roomCostMaxtrix.get(pos.x, pos.y) === 1) {
-        this.r.createConstructionSite(pos, structure);
+      if (this.roomCostMaxtrix.get(pos.x, pos.y) != 255) {
+        this.r.createConstructionSite(pos.x, pos.y, structure);
       } else {
+        console.log("Failed to build " + structure + " at " + pos);
         failArray.push(pos);
       }
     }
   }
 
+  matrixedCSite(x: number, y: number, structureType: BuildableStructureConstant): void {
+    if (this.roomCostMaxtrix.get(x, y) != 255) {
+      this.r.createConstructionSite(x, y, structureType);
+    } else {
+      console.log("Failed to build structure at " + x + "," + y);
+    }
+  }
+
   createSourceStructures() {
     if (this.roomController && this.roomController.level > 1) {
-      let spawns = this.r.find(FIND_MY_SPAWNS);
+      let spawn = this.r.find(FIND_MY_SPAWNS)[0];
+      let initialPos = this.r.getPositionAt(spawn.pos.x + 4, spawn.pos.y);
       let sources = this.roomSources;
+      for (let source of sources) {
+        if (!this.r.memory.sourcesMapped) {
+          this.r.memory.sourcesMapped = [];
+        }
 
-      for (let spawn of spawns) {
-        for (let source of sources) {
-          if (!this.r.memory.sourcesMapped) {
-            this.r.memory.sourcesMapped = [];
-          }
-
-          if (this.r.memory.sourcesMapped.indexOf(source.id) === -1) {
-            let path = this.r.findPath(spawn.pos, source.pos, {
-              maxOps: 100,
-              ignoreCreeps: true,
-              ignoreDestructibleStructures: true,
-              swampCost: 1,
-            });
-            if (path.length > 0) {
-              for (let i = 0; i < path.length - 2; i++) {
-                this.r.createConstructionSite(path[i].x, path[i].y, STRUCTURE_ROAD);
-              }
+        if (this.r.memory.sourcesMapped.indexOf(source.id) === -1 && initialPos) {
+          let path = this.r.findPath(initialPos, source.pos, {
+            maxOps: 100,
+            ignoreCreeps: true,
+            ignoreDestructibleStructures: true,
+            swampCost: 1,
+          });
+          if (path.length > 0) {
+            for (let i = 0; i < path.length - 2; i++) {
+              this.matrixedCSite(path[i].x, path[i].y, STRUCTURE_ROAD);
             }
-            this.r.createConstructionSite(
-              path[path.length - 2].x,
-              path[path.length - 2].y,
-              STRUCTURE_CONTAINER
-            );
-
-            this.r.memory.sourcesMapped.push(source.id);
           }
+          this.matrixedCSite(path[path.length - 2].x, path[path.length - 2].y, STRUCTURE_CONTAINER);
+
+          this.r.memory.sourcesMapped.push(source.id);
+          this.roomCostMaxtrix.reset();
         }
       }
     }
