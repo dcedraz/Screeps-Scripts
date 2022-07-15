@@ -20,6 +20,9 @@ export class StructuresInstance {
       ramparts: Array<RoomPosition>(),
     }
   ) {
+    this.sortConstructionSites();
+    this.createExtensions();
+    this.createSourceStructures();
     this.runMemoized();
   }
 
@@ -312,11 +315,5 @@ export class StructuresInstance {
       }
     }
     this.myConstructionSites = sortedSites;
-  }
-
-  run() {
-    this.sortConstructionSites();
-    this.createExtensions();
-    this.createSourceStructures();
   }
 }
