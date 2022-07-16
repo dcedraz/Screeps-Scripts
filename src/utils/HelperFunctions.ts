@@ -83,15 +83,15 @@ export class HelperFunctions {
 
   public static emptyBaseStructures(): BaseStructures {
     return {
-      spawns: [],
+      spawn: [],
       storage: [],
-      links: [],
-      containers: [],
-      towers: [],
-      roads: [],
-      extensions: [],
-      walls: [],
-      ramparts: [],
+      link: [],
+      container: [],
+      tower: [],
+      road: [],
+      extension: [],
+      wall: [],
+      rampart: [],
     };
   }
 }

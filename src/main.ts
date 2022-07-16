@@ -29,19 +29,40 @@ declare global {
     roomCostMatrix: any;
     roomPositions: any;
     roomBaseConstructed: boolean;
-    failedRoomPositions: any;
     sourcesMapped: Id<Source>[];
   }
   interface BaseStructures {
-      spawns: Array<RoomPosition>,
-      extensions: Array<RoomPosition>,
-      containers: Array<RoomPosition>,
-      towers: Array<RoomPosition>,
-      links: Array<RoomPosition>,
-      storage: Array<RoomPosition>,
-      roads: Array<RoomPosition>,
-      walls: Array<RoomPosition>,
-      ramparts: Array<RoomPosition>
+    spawn: Array<StructPos>;
+    extension: Array<StructPos>;
+    container: Array<StructPos>;
+    tower: Array<StructPos>;
+    link: Array<StructPos>;
+    storage: Array<StructPos>;
+    road: Array<StructPos>;
+    wall: Array<StructPos>;
+    rampart: Array<StructPos>;
+  }
+  //   "spawn"
+  //   "extension"
+  //   "rampart"
+  //   "road" 
+  //   "link" 
+  //   "constructedWall" 
+  //   "storage" 
+  //   "tower" 
+  //   "observer" 
+  //   "powerSpawn" 
+  //   "extractor" 
+  //   "lab" 
+  //   "terminal" 
+  //   "container" 
+  //   "nuker" 
+  //   "factory"
+
+  interface StructPos {
+    x: number;
+    y: number;
+    built: boolean;
   }
 
   interface SpawnWorkOrder {
