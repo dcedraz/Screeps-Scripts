@@ -46,14 +46,21 @@ export class StructuresInstance {
     return positions;
   }
 
+  checkPosOnMatrix(x: number, y: number): RoomPosition | null {
+    if (this.roomCostMaxtrix.get(x, y) != 255) {
+      return this.r.getPositionAt(x, y);
+    }
+    return null;
+  }
+
   calcRoomPositions(): Object {
     console.log(`Calculating room positions for ${this.r.name}`);
 
     // Calculate Spawn positions
     const initialSpawn = this.r.find(FIND_MY_SPAWNS)[0];
     const initialSpawnPos = initialSpawn.pos;
-    const secondSpawnPos = this.r.getPositionAt(initialSpawn.pos.x - 3, initialSpawn.pos.y);
-    const thirdSpawnPos = this.r.getPositionAt(initialSpawn.pos.x - 6, initialSpawn.pos.y);
+    const secondSpawnPos = this.checkPosOnMatrix(initialSpawn.pos.x - 3, initialSpawn.pos.y);
+    const thirdSpawnPos = this.checkPosOnMatrix(initialSpawn.pos.x - 6, initialSpawn.pos.y);
     const initialX = initialSpawn.pos.x - 3;
     const initialY = initialSpawn.pos.y;
     if (initialSpawnPos) {
@@ -78,7 +85,7 @@ export class StructuresInstance {
       });
     }
     // Calculate Storage position
-    const storagePos = this.r.getPositionAt(initialX, initialY - 3);
+    const storagePos = this.checkPosOnMatrix(initialX, initialY - 3);
     if (storagePos) {
       this.roomPositions.storage.push({
         x: storagePos.x,
@@ -88,7 +95,7 @@ export class StructuresInstance {
     }
 
     // Calculate Links positions
-    const firstLinkPos = this.r.getPositionAt(initialX, initialY + 3);
+    const firstLinkPos = this.checkPosOnMatrix(initialX, initialY + 3);
     if (firstLinkPos) {
       this.roomPositions.link.push({
         x: firstLinkPos.x,
@@ -98,10 +105,10 @@ export class StructuresInstance {
     }
 
     // Calculate Towers positions
-    const firstTowerPos = this.r.getPositionAt(initialX + 1, initialY + 1);
-    const secondTowerPos = this.r.getPositionAt(initialX - 1, initialY + 1);
-    const thirdTowerPos = this.r.getPositionAt(initialX + 1, initialY - 1);
-    const fourthTowerPos = this.r.getPositionAt(initialX - 1, initialY - 1);
+    const firstTowerPos = this.checkPosOnMatrix(initialX + 1, initialY + 1);
+    const secondTowerPos = this.checkPosOnMatrix(initialX - 1, initialY + 1);
+    const thirdTowerPos = this.checkPosOnMatrix(initialX + 1, initialY - 1);
+    const fourthTowerPos = this.checkPosOnMatrix(initialX - 1, initialY - 1);
     if (firstTowerPos) {
       this.roomPositions.tower.push({
         x: firstTowerPos.x,
@@ -133,18 +140,18 @@ export class StructuresInstance {
 
     // Calculate Extension positions
     let extensionsArray = [];
-    extensionsArray.push(this.r.getPositionAt(initialX + 2, initialY + 1));
-    extensionsArray.push(this.r.getPositionAt(initialX - 2, initialY + 1));
-    extensionsArray.push(this.r.getPositionAt(initialX + 2, initialY - 1));
-    extensionsArray.push(this.r.getPositionAt(initialX - 2, initialY - 1));
-    extensionsArray.push(this.r.getPositionAt(initialX + 1, initialY + 2));
-    extensionsArray.push(this.r.getPositionAt(initialX - 1, initialY + 2));
-    extensionsArray.push(this.r.getPositionAt(initialX + 1, initialY - 2));
-    extensionsArray.push(this.r.getPositionAt(initialX - 1, initialY - 2));
-    extensionsArray.push(this.r.getPositionAt(initialX + 2, initialY + 2));
-    extensionsArray.push(this.r.getPositionAt(initialX - 2, initialY + 2));
-    extensionsArray.push(this.r.getPositionAt(initialX + 2, initialY - 2));
-    extensionsArray.push(this.r.getPositionAt(initialX - 2, initialY - 2));
+    extensionsArray.push(this.checkPosOnMatrix(initialX + 2, initialY + 1));
+    extensionsArray.push(this.checkPosOnMatrix(initialX - 2, initialY + 1));
+    extensionsArray.push(this.checkPosOnMatrix(initialX + 2, initialY - 1));
+    extensionsArray.push(this.checkPosOnMatrix(initialX - 2, initialY - 1));
+    extensionsArray.push(this.checkPosOnMatrix(initialX + 1, initialY + 2));
+    extensionsArray.push(this.checkPosOnMatrix(initialX - 1, initialY + 2));
+    extensionsArray.push(this.checkPosOnMatrix(initialX + 1, initialY - 2));
+    extensionsArray.push(this.checkPosOnMatrix(initialX - 1, initialY - 2));
+    extensionsArray.push(this.checkPosOnMatrix(initialX + 2, initialY + 2));
+    extensionsArray.push(this.checkPosOnMatrix(initialX - 2, initialY + 2));
+    extensionsArray.push(this.checkPosOnMatrix(initialX + 2, initialY - 2));
+    extensionsArray.push(this.checkPosOnMatrix(initialX - 2, initialY - 2));
 
     for (const pos of extensionsArray) {
       if (pos) {
@@ -170,10 +177,10 @@ export class StructuresInstance {
       let y = pos.y;
       for (let i = 1; i < 2; i++) {
         let roadPosArray = [];
-        roadPosArray.push(this.r.getPositionAt(x + i, y));
-        roadPosArray.push(this.r.getPositionAt(x - i, y));
-        roadPosArray.push(this.r.getPositionAt(x, y + i));
-        roadPosArray.push(this.r.getPositionAt(x, y - i));
+        roadPosArray.push(this.checkPosOnMatrix(x + i, y));
+        roadPosArray.push(this.checkPosOnMatrix(x - i, y));
+        roadPosArray.push(this.checkPosOnMatrix(x, y + i));
+        roadPosArray.push(this.checkPosOnMatrix(x, y - i));
         for (const roadPos of roadPosArray) {
           if (roadPos) {
             this.roomPositions.road.push({
@@ -272,22 +279,22 @@ export class StructuresInstance {
   }
 
   structsToBuild(): boolean {
-    let failedStructures = false
+    let failedStructures = false;
     Object.keys(this.roomPositions).forEach((struct) => {
-    for (const pos of this.roomPositions[struct as keyof typeof this.roomPositions]) {
-      if (!pos.built) {
-        failedStructures = true;
-        break;
+      for (const pos of this.roomPositions[struct as keyof typeof this.roomPositions]) {
+        if (!pos.built) {
+          failedStructures = true;
+          break;
+        }
       }
-    }
     });
     return failedStructures;
   }
 
-
   // Build structures in room positions
   buildRoomPositions(): void {
-    if (this.roomController && this.roomController.level > 1 && this.structsToBuild()) {
+    //let cpu = Game.cpu.getUsed();
+    if (this.roomController && this.roomController.level > 1 && this.structsToBuild() && Game.time % 100 === 0) {
       Object.keys(this.roomPositions).forEach((struct) => {
         for (const pos of this.roomPositions[struct as keyof typeof this.roomPositions]) {
           if (pos.built === false) {
@@ -296,6 +303,8 @@ export class StructuresInstance {
         }
       });
     }
+    //cpu = Game.cpu.getUsed() - cpu;
+    //console.log("Needed", cpu, " cpu time");
   }
 
   matrixedCSite(x: number, y: number, structureType: BuildableStructureConstant): boolean {
@@ -366,5 +375,11 @@ export class StructuresInstance {
       }
     }
     this.myConstructionSites = sortedSites;
+  }
+
+  reset(): void {
+    console.log("Reset roomPositions for room: ", this.r.name);
+    this.roomPositions = HelperFunctions.emptyBaseStructures();
+    delete this.r.memory.roomPositions;
   }
 }
