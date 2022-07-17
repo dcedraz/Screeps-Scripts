@@ -1,5 +1,6 @@
 import { ErrorMapper } from "utils/ErrorMapper";
 import { RoomInstance } from "RoomInstance";
+import MemHack from "utils/memhack";
 
 declare global {
   /*
@@ -25,7 +26,42 @@ declare global {
   }
 
   interface RoomMemory {
+    roomCostMatrix: any;
+    roomPositions: any;
     sourcesMapped: Id<Source>[];
+  }
+  interface BaseStructures {
+    spawn: Array<StructPos>;
+    extension: Array<StructPos>;
+    container: Array<StructPos>;
+    tower: Array<StructPos>;
+    link: Array<StructPos>;
+    storage: Array<StructPos>;
+    road: Array<StructPos>;
+    wall: Array<StructPos>;
+    rampart: Array<StructPos>;
+  }
+  //   "spawn"
+  //   "extension"
+  //   "rampart"
+  //   "road"
+  //   "link"
+  //   "constructedWall"
+  //   "storage"
+  //   "tower"
+  //   "observer"
+  //   "powerSpawn"
+  //   "extractor"
+  //   "lab"
+  //   "terminal"
+  //   "container"
+  //   "nuker"
+  //   "factory"
+
+  interface StructPos {
+    x: number;
+    y: number;
+    built: boolean;
   }
 
   interface SpawnWorkOrder {
@@ -42,11 +78,17 @@ declare global {
       log: any;
     }
   }
+
+  interface RawMemory {
+    _parsed: Memory;
+  }
 }
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 export const loop = ErrorMapper.wrapLoop(() => {
+  MemHack.pretick();
+
   // Automatically delete memory of missing creeps
   if (Game.time % 100 === 0) {
     for (const name in Memory.creeps) {
