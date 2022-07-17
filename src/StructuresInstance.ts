@@ -25,11 +25,33 @@ export class StructuresInstance {
     // this.createVisuals();
   }
 
+  checkPositionsForRect(rect: {
+    x1: number;
+    x2: number;
+    y1: number;
+    y2: number;
+  }): RoomPosition[] | undefined {
+    let positions: RoomPosition[] = [];
+
+    for (let x = rect.x1; x <= rect.x2; x++) {
+      for (let y = rect.y1; y <= rect.y2; y++) {
+        if (this.roomCostMaxtrix.get(x, y) === 255 || x < 0 || x >= 50 || y < 0 || y >= 50) {
+          return undefined;
+        } else {
+          let pos = this.r.getPositionAt(x, y);
+          if (pos) positions.push(pos);
+        }
+      }
+    }
+    return positions;
+  }
+
   calcRoomPositions(): Object {
     console.log(`Calculating room positions for ${this.r.name}`);
+
     // Calculate Spawn positions
     const initialSpawn = this.r.find(FIND_MY_SPAWNS)[0];
-    const initialSpawnPos = this.r.getPositionAt(initialSpawn.pos.x, initialSpawn.pos.y);
+    const initialSpawnPos = initialSpawn.pos;
     const secondSpawnPos = this.r.getPositionAt(initialSpawn.pos.x - 3, initialSpawn.pos.y);
     const thirdSpawnPos = this.r.getPositionAt(initialSpawn.pos.x - 6, initialSpawn.pos.y);
     const initialX = initialSpawn.pos.x - 3;
