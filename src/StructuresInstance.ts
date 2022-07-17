@@ -29,11 +29,11 @@ export class StructuresInstance {
     console.log(`Calculating room positions for ${this.r.name}`);
     // Calculate Spawn positions
     const initialSpawn = this.r.find(FIND_MY_SPAWNS)[0];
-    const initialX = initialSpawn.pos.x;
+    const initialSpawnPos = this.r.getPositionAt(initialSpawn.pos.x, initialSpawn.pos.y);
+    const secondSpawnPos = this.r.getPositionAt(initialSpawn.pos.x - 3, initialSpawn.pos.y);
+    const thirdSpawnPos = this.r.getPositionAt(initialSpawn.pos.x - 6, initialSpawn.pos.y);
+    const initialX = initialSpawn.pos.x - 3;
     const initialY = initialSpawn.pos.y;
-    const initialSpawnPos = this.r.getPositionAt(initialX, initialY);
-    const secondSpawnPos = this.r.getPositionAt(initialX + 3, initialY);
-    const thirdSpawnPos = this.r.getPositionAt(initialX - 3, initialY);
     if (initialSpawnPos) {
       this.roomPositions.spawn.push({
         x: initialSpawnPos.x,
@@ -286,7 +286,7 @@ export class StructuresInstance {
   createSourceStructures() {
     if (this.roomController && this.roomController.level > 1) {
       let spawn = this.r.find(FIND_MY_SPAWNS)[0];
-      let initialPos = this.r.getPositionAt(spawn.pos.x + 4, spawn.pos.y);
+      let initialPos = this.r.getPositionAt(spawn.pos.x, spawn.pos.y);
       let sources = this.roomSources;
       for (let source of sources) {
         if (!this.r.memory.sourcesMapped) {

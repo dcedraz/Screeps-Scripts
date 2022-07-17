@@ -3794,7 +3794,6 @@ class StructuresInstance {
         this.sortConstructionSites();
         this.buildRoomPositions();
         this.createSourceStructures();
-        console.log("My consuction sites: ", this.myConstructionSites.length);
     }
     runMemoized() {
         const memoizedcalcRoomPositions = HelperFunctions.memoizeRoomPositions(this.calcRoomPositions.bind(this), this.r);
@@ -3805,16 +3804,16 @@ class StructuresInstance {
         console.log(`Calculating room positions for ${this.r.name}`);
         // Calculate Spawn positions
         const initialSpawn = this.r.find(FIND_MY_SPAWNS)[0];
-        const initialX = initialSpawn.pos.x;
+        const initialSpawnPos = this.r.getPositionAt(initialSpawn.pos.x, initialSpawn.pos.y);
+        const secondSpawnPos = this.r.getPositionAt(initialSpawn.pos.x - 3, initialSpawn.pos.y);
+        const thirdSpawnPos = this.r.getPositionAt(initialSpawn.pos.x - 6, initialSpawn.pos.y);
+        const initialX = initialSpawn.pos.x - 3;
         const initialY = initialSpawn.pos.y;
-        const initialSpawnPos = this.r.getPositionAt(initialX, initialY);
-        const secondSpawnPos = this.r.getPositionAt(initialX + 3, initialY);
-        const thirdSpawnPos = this.r.getPositionAt(initialX - 3, initialY);
         if (initialSpawnPos) {
             this.roomPositions.spawn.push({
                 x: initialSpawnPos.x,
                 y: initialSpawnPos.y,
-                built: false,
+                built: true,
             });
         }
         if (secondSpawnPos) {
@@ -4039,7 +4038,7 @@ class StructuresInstance {
     createSourceStructures() {
         if (this.roomController && this.roomController.level > 1) {
             let spawn = this.r.find(FIND_MY_SPAWNS)[0];
-            let initialPos = this.r.getPositionAt(spawn.pos.x + 4, spawn.pos.y);
+            let initialPos = this.r.getPositionAt(spawn.pos.x, spawn.pos.y);
             let sources = this.roomSources;
             for (let source of sources) {
                 if (!this.r.memory.sourcesMapped) {
@@ -4155,9 +4154,34 @@ class RoomInstance {
     }
 }
 
+// Usage:
+// At top of main: import MemHack from './MemHack'
+// At top of loop(): MemHack.pretick()
+// Thats it!
+const MemHack = {
+    memory: undefined,
+    parseTime: -1,
+    register() {
+        const start = Game.cpu.getUsed();
+        this.memory = Memory;
+        const end = Game.cpu.getUsed();
+        this.parseTime = end - start;
+        this.memory = RawMemory._parsed;
+    },
+    pretick() {
+        if (this.memory) {
+            delete global.Memory;
+            global.Memory = this.memory;
+            RawMemory._parsed = this.memory;
+        }
+    },
+};
+MemHack.register();
+
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 const loop = ErrorMapper.wrapLoop(() => {
+    MemHack.pretick();
     // Automatically delete memory of missing creeps
     if (Game.time % 100 === 0) {
         for (const name in Memory.creeps) {
