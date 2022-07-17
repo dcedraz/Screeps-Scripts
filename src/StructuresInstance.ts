@@ -271,13 +271,23 @@ export class StructuresInstance {
     }
   }
 
+  structsToBuild(): boolean {
+    let failedStructures = false
+    Object.keys(this.roomPositions).forEach((struct) => {
+    for (const pos of this.roomPositions[struct as keyof typeof this.roomPositions]) {
+      if (!pos.built) {
+        failedStructures = true;
+        break;
+      }
+    }
+    });
+    return failedStructures;
+  }
+
+
   // Build structures in room positions
   buildRoomPositions(): void {
-    if (
-      this.roomController &&
-      this.roomController.level > 1 &&
-      !this.r.memory.roomBaseConstructed
-    ) {
+    if (this.roomController && this.roomController.level > 1 && this.structsToBuild()) {
       Object.keys(this.roomPositions).forEach((struct) => {
         for (const pos of this.roomPositions[struct as keyof typeof this.roomPositions]) {
           if (pos.built === false) {
@@ -285,10 +295,6 @@ export class StructuresInstance {
           }
         }
       });
-      //reset costmatrix memory
-      this.roomCostMaxtrix.reset();
-      this.r.memory.roomBaseConstructed = true;
-      // TODO implement a retry to build the failed structures
     }
   }
 

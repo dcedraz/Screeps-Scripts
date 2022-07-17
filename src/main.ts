@@ -28,7 +28,6 @@ declare global {
   interface RoomMemory {
     roomCostMatrix: any;
     roomPositions: any;
-    roomBaseConstructed: boolean;
     sourcesMapped: Id<Source>[];
   }
   interface BaseStructures {
