@@ -3592,6 +3592,37 @@ class RoleBuilder {
             }
         }
     }
+    sortConstructionSites() {
+        let sortedSites = [];
+        let sites = this.myConstructionSites;
+        for (const site of sites) {
+            if (site.structureType == STRUCTURE_EXTENSION) {
+                sortedSites.push(site);
+            }
+            else if (site.structureType == STRUCTURE_SPAWN) {
+                sortedSites.push(site);
+            }
+            else if (site.structureType == STRUCTURE_TOWER) {
+                sortedSites.push(site);
+            }
+            else if (site.structureType == STRUCTURE_CONTAINER) {
+                sortedSites.push(site);
+            }
+            else if (site.structureType == STRUCTURE_STORAGE) {
+                sortedSites.push(site);
+            }
+            else if (site.structureType == STRUCTURE_ROAD) {
+                sortedSites.push(site);
+            }
+            else if (site.structureType == STRUCTURE_WALL) {
+                sortedSites.push(site);
+            }
+            else if (site.structureType == STRUCTURE_RAMPART) {
+                sortedSites.push(site);
+            }
+        }
+        this.myConstructionSites = sortedSites;
+    }
 }
 
 class RoleUpgrader {
@@ -3800,13 +3831,35 @@ class StructuresInstance {
         this.roomPositions = memoizedcalcRoomPositions(this.r.name);
         // this.createVisuals();
     }
+    checkPositionsForRect(rect) {
+        let positions = [];
+        for (let x = rect.x1; x <= rect.x2; x++) {
+            for (let y = rect.y1; y <= rect.y2; y++) {
+                if (this.roomCostMaxtrix.get(x, y) === 255 || x < 0 || x >= 50 || y < 0 || y >= 50) {
+                    return undefined;
+                }
+                else {
+                    let pos = this.r.getPositionAt(x, y);
+                    if (pos)
+                        positions.push(pos);
+                }
+            }
+        }
+        return positions;
+    }
+    checkPosOnMatrix(x, y) {
+        if (this.roomCostMaxtrix.get(x, y) != 255) {
+            return this.r.getPositionAt(x, y);
+        }
+        return null;
+    }
     calcRoomPositions() {
         console.log(`Calculating room positions for ${this.r.name}`);
         // Calculate Spawn positions
         const initialSpawn = this.r.find(FIND_MY_SPAWNS)[0];
-        const initialSpawnPos = this.r.getPositionAt(initialSpawn.pos.x, initialSpawn.pos.y);
-        const secondSpawnPos = this.r.getPositionAt(initialSpawn.pos.x - 3, initialSpawn.pos.y);
-        const thirdSpawnPos = this.r.getPositionAt(initialSpawn.pos.x - 6, initialSpawn.pos.y);
+        const initialSpawnPos = initialSpawn.pos;
+        const secondSpawnPos = this.checkPosOnMatrix(initialSpawn.pos.x - 3, initialSpawn.pos.y);
+        const thirdSpawnPos = this.checkPosOnMatrix(initialSpawn.pos.x - 6, initialSpawn.pos.y);
         const initialX = initialSpawn.pos.x - 3;
         const initialY = initialSpawn.pos.y;
         if (initialSpawnPos) {
@@ -3831,7 +3884,7 @@ class StructuresInstance {
             });
         }
         // Calculate Storage position
-        const storagePos = this.r.getPositionAt(initialX, initialY - 3);
+        const storagePos = this.checkPosOnMatrix(initialX, initialY - 3);
         if (storagePos) {
             this.roomPositions.storage.push({
                 x: storagePos.x,
@@ -3840,7 +3893,7 @@ class StructuresInstance {
             });
         }
         // Calculate Links positions
-        const firstLinkPos = this.r.getPositionAt(initialX, initialY + 3);
+        const firstLinkPos = this.checkPosOnMatrix(initialX, initialY + 3);
         if (firstLinkPos) {
             this.roomPositions.link.push({
                 x: firstLinkPos.x,
@@ -3849,10 +3902,10 @@ class StructuresInstance {
             });
         }
         // Calculate Towers positions
-        const firstTowerPos = this.r.getPositionAt(initialX + 1, initialY + 1);
-        const secondTowerPos = this.r.getPositionAt(initialX - 1, initialY + 1);
-        const thirdTowerPos = this.r.getPositionAt(initialX + 1, initialY - 1);
-        const fourthTowerPos = this.r.getPositionAt(initialX - 1, initialY - 1);
+        const firstTowerPos = this.checkPosOnMatrix(initialX + 1, initialY + 1);
+        const secondTowerPos = this.checkPosOnMatrix(initialX - 1, initialY + 1);
+        const thirdTowerPos = this.checkPosOnMatrix(initialX + 1, initialY - 1);
+        const fourthTowerPos = this.checkPosOnMatrix(initialX - 1, initialY - 1);
         if (firstTowerPos) {
             this.roomPositions.tower.push({
                 x: firstTowerPos.x,
@@ -3883,18 +3936,18 @@ class StructuresInstance {
         }
         // Calculate Extension positions
         let extensionsArray = [];
-        extensionsArray.push(this.r.getPositionAt(initialX + 2, initialY + 1));
-        extensionsArray.push(this.r.getPositionAt(initialX - 2, initialY + 1));
-        extensionsArray.push(this.r.getPositionAt(initialX + 2, initialY - 1));
-        extensionsArray.push(this.r.getPositionAt(initialX - 2, initialY - 1));
-        extensionsArray.push(this.r.getPositionAt(initialX + 1, initialY + 2));
-        extensionsArray.push(this.r.getPositionAt(initialX - 1, initialY + 2));
-        extensionsArray.push(this.r.getPositionAt(initialX + 1, initialY - 2));
-        extensionsArray.push(this.r.getPositionAt(initialX - 1, initialY - 2));
-        extensionsArray.push(this.r.getPositionAt(initialX + 2, initialY + 2));
-        extensionsArray.push(this.r.getPositionAt(initialX - 2, initialY + 2));
-        extensionsArray.push(this.r.getPositionAt(initialX + 2, initialY - 2));
-        extensionsArray.push(this.r.getPositionAt(initialX - 2, initialY - 2));
+        extensionsArray.push(this.checkPosOnMatrix(initialX + 2, initialY + 1));
+        extensionsArray.push(this.checkPosOnMatrix(initialX - 2, initialY + 1));
+        extensionsArray.push(this.checkPosOnMatrix(initialX + 2, initialY - 1));
+        extensionsArray.push(this.checkPosOnMatrix(initialX - 2, initialY - 1));
+        extensionsArray.push(this.checkPosOnMatrix(initialX + 1, initialY + 2));
+        extensionsArray.push(this.checkPosOnMatrix(initialX - 1, initialY + 2));
+        extensionsArray.push(this.checkPosOnMatrix(initialX + 1, initialY - 2));
+        extensionsArray.push(this.checkPosOnMatrix(initialX - 1, initialY - 2));
+        extensionsArray.push(this.checkPosOnMatrix(initialX + 2, initialY + 2));
+        extensionsArray.push(this.checkPosOnMatrix(initialX - 2, initialY + 2));
+        extensionsArray.push(this.checkPosOnMatrix(initialX + 2, initialY - 2));
+        extensionsArray.push(this.checkPosOnMatrix(initialX - 2, initialY - 2));
         for (const pos of extensionsArray) {
             if (pos) {
                 this.roomPositions.extension.push({
@@ -3916,10 +3969,10 @@ class StructuresInstance {
             let y = pos.y;
             for (let i = 1; i < 2; i++) {
                 let roadPosArray = [];
-                roadPosArray.push(this.r.getPositionAt(x + i, y));
-                roadPosArray.push(this.r.getPositionAt(x - i, y));
-                roadPosArray.push(this.r.getPositionAt(x, y + i));
-                roadPosArray.push(this.r.getPositionAt(x, y - i));
+                roadPosArray.push(this.checkPosOnMatrix(x + i, y));
+                roadPosArray.push(this.checkPosOnMatrix(x - i, y));
+                roadPosArray.push(this.checkPosOnMatrix(x, y + i));
+                roadPosArray.push(this.checkPosOnMatrix(x, y - i));
                 for (const roadPos of roadPosArray) {
                     if (roadPos) {
                         this.roomPositions.road.push({
@@ -4004,11 +4057,22 @@ class StructuresInstance {
             }
         }
     }
+    structsToBuild() {
+        let failedStructures = false;
+        Object.keys(this.roomPositions).forEach((struct) => {
+            for (const pos of this.roomPositions[struct]) {
+                if (!pos.built) {
+                    failedStructures = true;
+                    break;
+                }
+            }
+        });
+        return failedStructures;
+    }
     // Build structures in room positions
     buildRoomPositions() {
-        if (this.roomController &&
-            this.roomController.level > 1 &&
-            !this.r.memory.roomBaseConstructed) {
+        //let cpu = Game.cpu.getUsed();
+        if (this.roomController && this.roomController.level > 1 && this.structsToBuild() && Game.time % 100 === 0) {
             Object.keys(this.roomPositions).forEach((struct) => {
                 for (const pos of this.roomPositions[struct]) {
                     if (pos.built === false) {
@@ -4016,11 +4080,9 @@ class StructuresInstance {
                     }
                 }
             });
-            //reset costmatrix memory
-            this.roomCostMaxtrix.reset();
-            this.r.memory.roomBaseConstructed = true;
-            // TODO implement a retry to build the failed structures
         }
+        //cpu = Game.cpu.getUsed() - cpu;
+        //console.log("Needed", cpu, " cpu time");
     }
     matrixedCSite(x, y, structureType) {
         let returnValue = false;
@@ -4095,6 +4157,11 @@ class StructuresInstance {
         }
         this.myConstructionSites = sortedSites;
     }
+    reset() {
+        console.log("Reset roomPositions for room: ", this.r.name);
+        this.roomPositions = HelperFunctions.emptyBaseStructures();
+        delete this.r.memory.roomPositions;
+    }
 }
 
 class RoomInstance {
@@ -4136,11 +4203,11 @@ class RoomInstance {
                 this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("harvester", this.roomCreeps.harvesters.length < 2 ? 10 : 21, targetSource));
             }
             // Spawn upgraders
-            if (this.roomCreeps.upgraders.length < 2) {
+            if (this.roomCreeps.upgraders.length < 0) {
                 this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("upgrader", 20));
             }
             // Spawn builders
-            if (this.roomCreeps.builders.length < 1 && this.roomController.level > 1) {
+            if (this.roomCreeps.builders.length < 2 && this.roomController.level > 1) {
                 this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("builder", this.roomCreeps.builders.length < 1 ? 10 : 21));
             }
         }
