@@ -3592,37 +3592,6 @@ class RoleBuilder {
             }
         }
     }
-    sortConstructionSites() {
-        let sortedSites = [];
-        let sites = this.myConstructionSites;
-        for (const site of sites) {
-            if (site.structureType == STRUCTURE_EXTENSION) {
-                sortedSites.push(site);
-            }
-            else if (site.structureType == STRUCTURE_SPAWN) {
-                sortedSites.push(site);
-            }
-            else if (site.structureType == STRUCTURE_TOWER) {
-                sortedSites.push(site);
-            }
-            else if (site.structureType == STRUCTURE_CONTAINER) {
-                sortedSites.push(site);
-            }
-            else if (site.structureType == STRUCTURE_STORAGE) {
-                sortedSites.push(site);
-            }
-            else if (site.structureType == STRUCTURE_ROAD) {
-                sortedSites.push(site);
-            }
-            else if (site.structureType == STRUCTURE_WALL) {
-                sortedSites.push(site);
-            }
-            else if (site.structureType == STRUCTURE_RAMPART) {
-                sortedSites.push(site);
-            }
-        }
-        this.myConstructionSites = sortedSites;
-    }
 }
 
 class RoleUpgrader {
@@ -3967,7 +3936,7 @@ class StructuresInstance {
         for (const pos of structures) {
             let x = pos.x;
             let y = pos.y;
-            for (let i = 1; i < 2; i++) {
+            for (let i = 1; i <= 2; i++) {
                 let roadPosArray = [];
                 roadPosArray.push(this.checkPosOnMatrix(x + i, y));
                 roadPosArray.push(this.checkPosOnMatrix(x - i, y));
@@ -4072,7 +4041,10 @@ class StructuresInstance {
     // Build structures in room positions
     buildRoomPositions() {
         //let cpu = Game.cpu.getUsed();
-        if (this.roomController && this.roomController.level > 1 && this.structsToBuild() && Game.time % 100 === 0) {
+        if (this.roomController &&
+            this.roomController.level > 1 &&
+            this.structsToBuild() &&
+            Game.time % 100 === 0) {
             Object.keys(this.roomPositions).forEach((struct) => {
                 for (const pos of this.roomPositions[struct]) {
                     if (pos.built === false) {
@@ -4081,6 +4053,9 @@ class StructuresInstance {
                 }
             });
         }
+        // reset roomPositions and CostMatrix
+        // this.roomCostMaxtrix.reset();
+        // this.reset();
         //cpu = Game.cpu.getUsed() - cpu;
         //console.log("Needed", cpu, " cpu time");
     }
@@ -4203,11 +4178,11 @@ class RoomInstance {
                 this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("harvester", this.roomCreeps.harvesters.length < 2 ? 10 : 21, targetSource));
             }
             // Spawn upgraders
-            if (this.roomCreeps.upgraders.length < 0) {
+            if (this.roomCreeps.upgraders.length < 1) {
                 this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("upgrader", 20));
             }
             // Spawn builders
-            if (this.roomCreeps.builders.length < 2 && this.roomController.level > 1) {
+            if (this.roomCreeps.builders.length < 1 && this.roomController.level > 1) {
                 this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("builder", this.roomCreeps.builders.length < 1 ? 10 : 21));
             }
         }

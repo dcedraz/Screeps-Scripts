@@ -175,7 +175,7 @@ export class StructuresInstance {
     for (const pos of structures) {
       let x = pos.x;
       let y = pos.y;
-      for (let i = 1; i < 2; i++) {
+      for (let i = 1; i <= 2; i++) {
         let roadPosArray = [];
         roadPosArray.push(this.checkPosOnMatrix(x + i, y));
         roadPosArray.push(this.checkPosOnMatrix(x - i, y));
@@ -294,7 +294,12 @@ export class StructuresInstance {
   // Build structures in room positions
   buildRoomPositions(): void {
     //let cpu = Game.cpu.getUsed();
-    if (this.roomController && this.roomController.level > 1 && this.structsToBuild() && Game.time % 100 === 0) {
+    if (
+      this.roomController &&
+      this.roomController.level > 1 &&
+      this.structsToBuild() &&
+      Game.time % 100 === 0
+    ) {
       Object.keys(this.roomPositions).forEach((struct) => {
         for (const pos of this.roomPositions[struct as keyof typeof this.roomPositions]) {
           if (pos.built === false) {
@@ -303,6 +308,10 @@ export class StructuresInstance {
         }
       });
     }
+    // reset roomPositions and CostMatrix
+    // this.roomCostMaxtrix.reset();
+    // this.reset();
+
     //cpu = Game.cpu.getUsed() - cpu;
     //console.log("Needed", cpu, " cpu time");
   }
