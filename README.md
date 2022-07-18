@@ -13,13 +13,6 @@ The code is written within the src directory, the `.ts` files are converted into
 * `screeps-snippets` from here: https://github.com/screepers/screeps-snippets
 
 ### Things will need in the future:
-<<<<<<< HEAD
-* `screeps-launcher`
-https://github.com/screepers/screeps-launcher
-* `screeps-server` by Jomik (this is another option for running a docker private server)
-https://github.com/Jomik/screeps-server
-
-=======
 * better way to memoize on global by Marvin:
 https://github.com/The-International-Screeps-Bot/The-International-Open-Source/blob/Typescript/src/room/roomAdditions.ts
 
@@ -32,6 +25,5 @@ https://github.com/screepers/screeps-launcher
 https://github.com/Jomik/screeps-server
 
 
->>>>>>> master
 * `screeps-steamless-client`
 https://github.com/laverdet/screeps-steamless-client

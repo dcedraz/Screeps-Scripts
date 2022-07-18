@@ -12,6 +12,16 @@ export class RoleHarvester {
     }
   }
 
+  moveToNerbyContainer() {
+    let containers = this.creep.pos.findInRange(FIND_STRUCTURES, 1, {
+      filter: (structure) =>
+        structure.structureType == STRUCTURE_CONTAINER
+    });
+    if (containers.length > 0) {
+      this.creep.moveTo(containers[0]);
+    }
+  }
+
   sortStorageTargetsByType(): Structure[] {
     let targets = this.creep.room.find(FIND_STRUCTURES, {
       filter: (structure: Structure) => {
@@ -64,19 +74,19 @@ export class RoleHarvester {
     );
   }
 
-  giveEnergyToNerbyBuilder() {
-    let builders = this.creep.pos.findInRange(FIND_MY_CREEPS, 1, {
-      filter: (creep) => creep.memory.role === "builder" || creep.memory.role === "upgrader",
+  giveEnergyToNerbyCreeps() {
+    let creeps = this.creep.pos.findInRange(FIND_MY_CREEPS, 1, {
+      filter: (creep) => creep.memory.role != "harvester",
     });
-    if (builders.length > 0) {
-      this.creep.transfer(builders[0], RESOURCE_ENERGY);
+    if (creeps.length > 0) {
+      this.creep.transfer(creeps[0], RESOURCE_ENERGY);
     }
   }
 
   runInitial() {
     if (this.creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
       this.repairNerbyContainer();
-      this.giveEnergyToNerbyBuilder();
+      this.giveEnergyToNerbyCreeps();
     }
 
     if (this.creep.store.getFreeCapacity() > 0) {

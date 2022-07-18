@@ -22,6 +22,7 @@ declare global {
     room: string;
     working: boolean;
     assigned_source?: Id<Source>;
+    container_pos?: RoomPosition;
     pathToSource?: PathStep[];
   }
 
@@ -29,7 +30,50 @@ declare global {
     roomCostMatrix: any;
     roomPositions: any;
     sourcesMapped: Id<Source>[];
+    sourceIds: Id<Source>[];
+    towers: number;
+    storedEnergy: number;
   }
+
+  interface Room {
+    _sources: Source[];
+    readonly sources: Source[];
+    _mineral: Mineral;
+    readonly mineral: Mineral;
+    _enemyCreeps: Creep[];
+    readonly enemyCreeps: Creep[];
+    _enemyAttackers: Creep[];
+    readonly enemyAttackers: Creep[];
+    _structures: OrganizedStructures;
+    // _structures: Partial<OrganizedStructures>;
+    readonly structures: OrganizedStructures;
+    _cSites: Record<StructureConstant, ConstructionSite[]>;
+    readonly cSites: Record<StructureConstant, ConstructionSite[]>;
+  }
+  interface OrganizedStructures {
+    spawn: StructureSpawn[];
+    extension: StructureExtension[];
+    road: StructureRoad[];
+    constructedWall: StructureWall[];
+    rampart: StructureRampart[];
+    keeperLair: StructureKeeperLair[];
+    portal: StructurePortal[];
+    controller: StructureController[];
+    link: StructureLink[];
+    storage: StructureStorage[];
+    tower: StructureTower[];
+    observer: StructureObserver[];
+    powerBank: StructurePowerBank[];
+    powerSpawn: StructurePowerSpawn[];
+    extractor: StructureExtractor[];
+    lab: StructureLab[];
+    terminal: StructureTerminal[];
+    container: StructureContainer[];
+    nuker: StructureNuker[];
+    factory: StructureFactory[];
+    invaderCore: StructureInvaderCore[];
+  }
+
   interface BaseStructures {
     spawn: Array<StructPos>;
     extension: Array<StructPos>;
@@ -41,22 +85,6 @@ declare global {
     wall: Array<StructPos>;
     rampart: Array<StructPos>;
   }
-  //   "spawn"
-  //   "extension"
-  //   "rampart"
-  //   "road"
-  //   "link"
-  //   "constructedWall"
-  //   "storage"
-  //   "tower"
-  //   "observer"
-  //   "powerSpawn"
-  //   "extractor"
-  //   "lab"
-  //   "terminal"
-  //   "container"
-  //   "nuker"
-  //   "factory"
 
   interface StructPos {
     x: number;

@@ -26,6 +26,13 @@ export class HelperFunctions {
     return (distance * 2 * income) / CARRY_CAPACITY;
   };
 
+  /**
+   * Uses a provided ID to find an object associated with it
+   */
+  public static findObjectWithID<T extends Id<any>>(ID: T): fromId<T> | undefined {
+    return Game.getObjectById(ID) || undefined;
+  }
+
   // check for hostile nearby
 
   public static isHostileNearby(structure: any): boolean {
