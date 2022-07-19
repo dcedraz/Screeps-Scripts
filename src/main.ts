@@ -31,6 +31,7 @@ declare global {
     roomPositions: any;
     sourcesMapped: Id<Source>[];
     sourceIds: Id<Source>[];
+    source_containers: Record<Id<Source>, RoomPosition[]>;
     towers: number;
     storedEnergy: number;
   }
@@ -49,6 +50,8 @@ declare global {
     readonly structures: OrganizedStructures;
     _cSites: Record<StructureConstant, ConstructionSite[]>;
     readonly cSites: Record<StructureConstant, ConstructionSite[]>;
+    _droppedEnergy: Resource[];
+    readonly droppedEnergy: Resource[];
   }
   interface OrganizedStructures {
     spawn: StructureSpawn[];

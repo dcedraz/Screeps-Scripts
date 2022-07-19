@@ -1,4 +1,5 @@
 import { RoleHarvester } from "creep roles/RoleHarvester";
+import { RoleHauler } from "creep roles/RoleHauler";
 import { RoleBuilder } from "creep roles/RoleBuilder";
 import { RoleUpgrader } from "creep roles/RoleUpgrader";
 
@@ -8,6 +9,7 @@ export class CreepsInstance {
     public myConstructionSites: ConstructionSite[],
     public creeps: Creep[] = room.find(FIND_MY_CREEPS),
     public harvesters: Creep[] = _.filter(creeps, (creep) => creep.memory.role == "harvester"),
+    public haulers: Creep[] = _.filter(creeps, (creep) => creep.memory.role == "hauler"),
     public upgraders: Creep[] = _.filter(creeps, (creep) => creep.memory.role == "upgrader"),
     public builders: Creep[] = _.filter(creeps, (creep) => creep.memory.role == "builder") // miners: Creep[] = _.filter(creeps, (creep) => creep.memory.role == 'miner'); // haulers: Creep[] = _.filter(creeps, (creep) => creep.memory.role == 'hauler');
   ) {}
@@ -40,6 +42,9 @@ export class CreepsInstance {
       const creep = this.creeps[creepName];
       if (creep.memory.role === "harvester") {
         new RoleHarvester(creep).runInitial();
+      }
+      if (creep.memory.role === "hauler") {
+        new RoleHauler(creep).run();
       }
       if (creep.memory.role === "upgrader") {
         new RoleUpgrader(creep).run();

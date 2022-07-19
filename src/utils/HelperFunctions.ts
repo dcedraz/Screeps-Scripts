@@ -13,6 +13,9 @@ export class HelperFunctions {
   public static isSpawn(s: Structure): s is StructureSpawn {
     return s.structureType === STRUCTURE_SPAWN;
   }
+  public static isStorage(s: Structure): s is StructureStorage {
+    return s.structureType === STRUCTURE_STORAGE;
+  }
 
   public static isController(s: Structure): s is StructureController {
     return s.structureType === STRUCTURE_CONTROLLER;

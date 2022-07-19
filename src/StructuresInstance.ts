@@ -362,6 +362,7 @@ export class StructuresInstance {
           //assign container pos to creep memory
           if (creeps.length > 0 && containerPos) {
             creeps[0].memory.container_pos = containerPos;
+            this.r.memory.source_containers[source.id].push(containerPos);
           }
           
           this.roomCostMaxtrix.reset();

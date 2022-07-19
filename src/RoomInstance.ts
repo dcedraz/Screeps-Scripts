@@ -60,6 +60,11 @@ export class RoomInstance {
         );
       }
 
+      // Spawn haulers
+      if (this.roomCreeps.haulers.length < this.roomCreeps.harvesters.length) {
+        this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("hauler", 10));
+      }
+
       // Spawn upgraders
       if (this.roomCreeps.upgraders.length < 1) {
         this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("upgrader", 20));

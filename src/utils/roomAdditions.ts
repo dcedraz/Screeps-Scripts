@@ -97,4 +97,13 @@ Object.defineProperties(Room.prototype, {
       return this._cSites;
     },
   },
+  droppedEnergy: {
+    get() {
+      if (this._droppedEnergy) return this._droppedEnergy;
+
+      return (this._droppedEnergy = this.find(FIND_DROPPED_RESOURCES, {
+        filter: (resource) => resource.resourceType === RESOURCE_ENERGY,
+      }));
+    },
+  },
 } as PropertyDescriptorMap & ThisType<Room>);
