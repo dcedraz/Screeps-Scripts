@@ -5,7 +5,6 @@ import { RoleUpgrader } from "creep roles/RoleUpgrader";
 export class CreepsInstance {
   constructor(
     public room: Room,
-    public myConstructionSites: ConstructionSite[],
     public creeps: Creep[] = room.find(FIND_MY_CREEPS),
     public harvesters: Creep[] = _.filter(creeps, (creep) => creep.memory.role == "harvester"),
     public upgraders: Creep[] = _.filter(creeps, (creep) => creep.memory.role == "upgrader"),
@@ -45,7 +44,7 @@ export class CreepsInstance {
         new RoleUpgrader(creep).run();
       }
       if (creep.memory.role === "builder") {
-        new RoleBuilder(creep, this.myConstructionSites).run();
+        new RoleBuilder(creep).run();
       }
     }
   }

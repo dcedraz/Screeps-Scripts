@@ -1,6 +1,9 @@
 import { HelperFunctions } from "utils/HelperFunctions";
 export class RoleBuilder {
-  constructor(public creep: Creep, public myConstructionSites: ConstructionSite[]) {}
+  constructor(
+    public creep: Creep,
+    public myConstructionSites: ConstructionSite[] = creep.room.find(FIND_CONSTRUCTION_SITES)
+  ) {}
 
   run() {
     if (this.creep.memory.working && this.creep.store[RESOURCE_ENERGY] == 0) {

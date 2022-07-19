@@ -3507,7 +3507,7 @@ class RoleHarvester {
 }
 
 class RoleBuilder {
-    constructor(creep, myConstructionSites) {
+    constructor(creep, myConstructionSites = creep.room.find(FIND_CONSTRUCTION_SITES)) {
         this.creep = creep;
         this.myConstructionSites = myConstructionSites;
     }
@@ -3634,10 +3634,9 @@ class RoleUpgrader {
 }
 
 class CreepsInstance {
-    constructor(room, myConstructionSites, creeps = room.find(FIND_MY_CREEPS), harvesters = _.filter(creeps, (creep) => creep.memory.role == "harvester"), upgraders = _.filter(creeps, (creep) => creep.memory.role == "upgrader"), builders = _.filter(creeps, (creep) => creep.memory.role == "builder") // miners: Creep[] = _.filter(creeps, (creep) => creep.memory.role == 'miner'); // haulers: Creep[] = _.filter(creeps, (creep) => creep.memory.role == 'hauler');
+    constructor(room, creeps = room.find(FIND_MY_CREEPS), harvesters = _.filter(creeps, (creep) => creep.memory.role == "harvester"), upgraders = _.filter(creeps, (creep) => creep.memory.role == "upgrader"), builders = _.filter(creeps, (creep) => creep.memory.role == "builder") // miners: Creep[] = _.filter(creeps, (creep) => creep.memory.role == 'miner'); // haulers: Creep[] = _.filter(creeps, (creep) => creep.memory.role == 'hauler');
     ) {
         this.room = room;
-        this.myConstructionSites = myConstructionSites;
         this.creeps = creeps;
         this.harvesters = harvesters;
         this.upgraders = upgraders;
@@ -3674,7 +3673,7 @@ class CreepsInstance {
                 new RoleUpgrader(creep).run();
             }
             if (creep.memory.role === "builder") {
-                new RoleBuilder(creep, this.myConstructionSites).run();
+                new RoleBuilder(creep).run();
             }
         }
     }
@@ -3783,15 +3782,13 @@ class CostMatrix {
 }
 
 class StructuresInstance {
-    constructor(r, roomSources, roomController = r.controller, myConstructionSites = r.find(FIND_CONSTRUCTION_SITES), roomCostMaxtrix = new CostMatrix(r), roomPositions = HelperFunctions.emptyBaseStructures()) {
+    constructor(r, roomSources, roomController = r.controller, roomCostMaxtrix = new CostMatrix(r), roomPositions = HelperFunctions.emptyBaseStructures()) {
         this.r = r;
         this.roomSources = roomSources;
         this.roomController = roomController;
-        this.myConstructionSites = myConstructionSites;
         this.roomCostMaxtrix = roomCostMaxtrix;
         this.roomPositions = roomPositions;
         this.runMemoized();
-        this.sortConstructionSites();
         this.buildRoomPositions();
         this.createSourceStructures();
     }
@@ -4100,38 +4097,6 @@ class StructuresInstance {
             }
         }
     }
-    // sort construction site array by structure type
-    sortConstructionSites() {
-        let sortedSites = [];
-        let sites = this.myConstructionSites;
-        for (const site of sites) {
-            if (site.structureType == STRUCTURE_EXTENSION) {
-                sortedSites.push(site);
-            }
-            else if (site.structureType == STRUCTURE_SPAWN) {
-                sortedSites.push(site);
-            }
-            else if (site.structureType == STRUCTURE_TOWER) {
-                sortedSites.push(site);
-            }
-            else if (site.structureType == STRUCTURE_CONTAINER) {
-                sortedSites.push(site);
-            }
-            else if (site.structureType == STRUCTURE_STORAGE) {
-                sortedSites.push(site);
-            }
-            else if (site.structureType == STRUCTURE_ROAD) {
-                sortedSites.push(site);
-            }
-            else if (site.structureType == STRUCTURE_WALL) {
-                sortedSites.push(site);
-            }
-            else if (site.structureType == STRUCTURE_RAMPART) {
-                sortedSites.push(site);
-            }
-        }
-        this.myConstructionSites = sortedSites;
-    }
     reset() {
         console.log("Reset roomPositions for room: ", this.r.name);
         this.roomPositions = HelperFunctions.emptyBaseStructures();
@@ -4142,7 +4107,7 @@ class StructuresInstance {
 class RoomInstance {
     constructor(room, roomController = room.controller, roomSpawner = new SpawnerInstance(room), roomSources = room.find(FIND_SOURCES, {
         filter: (source) => !HelperFunctions.isHostileNearby(source),
-    }), roomStructuresInstance = new StructuresInstance(room, roomSources), roomCreeps = new CreepsInstance(room, roomStructuresInstance.myConstructionSites)) {
+    }), roomStructuresInstance = new StructuresInstance(room, roomSources), roomCreeps = new CreepsInstance(room)) {
         this.room = room;
         this.roomController = roomController;
         this.roomSpawner = roomSpawner;
