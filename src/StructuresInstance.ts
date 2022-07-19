@@ -6,12 +6,10 @@ export class StructuresInstance {
     public r: Room,
     public roomSources: Source[],
     public roomController: StructureController | undefined = r.controller,
-    public myConstructionSites: ConstructionSite[] = r.find(FIND_CONSTRUCTION_SITES),
     public roomCostMaxtrix: CostMatrix = new CostMatrix(r),
     public roomPositions: BaseStructures = HelperFunctions.emptyBaseStructures()
   ) {
     this.runMemoized();
-    this.sortConstructionSites();
     this.buildRoomPositions();
     this.createSourceStructures();
   }
@@ -369,32 +367,6 @@ export class StructuresInstance {
         }
       }
     }
-  }
-
-  // sort construction site array by structure type
-  sortConstructionSites(): void {
-    let sortedSites: ConstructionSite[] = [];
-    let sites = this.myConstructionSites;
-    for (const site of sites) {
-      if (site.structureType == STRUCTURE_EXTENSION) {
-        sortedSites.push(site);
-      } else if (site.structureType == STRUCTURE_SPAWN) {
-        sortedSites.push(site);
-      } else if (site.structureType == STRUCTURE_TOWER) {
-        sortedSites.push(site);
-      } else if (site.structureType == STRUCTURE_CONTAINER) {
-        sortedSites.push(site);
-      } else if (site.structureType == STRUCTURE_STORAGE) {
-        sortedSites.push(site);
-      } else if (site.structureType == STRUCTURE_ROAD) {
-        sortedSites.push(site);
-      } else if (site.structureType == STRUCTURE_WALL) {
-        sortedSites.push(site);
-      } else if (site.structureType == STRUCTURE_RAMPART) {
-        sortedSites.push(site);
-      }
-    }
-    this.myConstructionSites = sortedSites;
   }
 
   reset(): void {

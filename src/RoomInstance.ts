@@ -12,10 +12,7 @@ export class RoomInstance {
       filter: (source) => !HelperFunctions.isHostileNearby(source),
     }),
     public roomStructuresInstance: StructuresInstance = new StructuresInstance(room, roomSources),
-    public roomCreeps: CreepsInstance = new CreepsInstance(
-      room,
-      roomStructuresInstance.myConstructionSites
-    )
+    public roomCreeps: CreepsInstance = new CreepsInstance(room)
   ) {}
   // public roomEnergyAvailable: number = room.energyAvailable,
   // public roomEnergyCapacityAvailable: number = room.energyCapacityAvailable,
