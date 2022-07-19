@@ -3,12 +3,11 @@ export class SpawnerInstance {
     public room: Room,
     public spawns: StructureSpawn[] = room.find(FIND_MY_SPAWNS),
     public spawnQueue: SpawnWorkOrder[] = []
-  ) {
-  }
+  ) {}
 
   run() {
-        if (this.spawnQueue.length) {
-      //this.debuggQueue("BEFORE");  
+    if (this.spawnQueue.length) {
+      //this.debuggQueue("BEFORE");
       this.spawnQueueSort();
       //this.debuggQueue("AFTER");
       this.spawnCreeps();
@@ -16,12 +15,14 @@ export class SpawnerInstance {
     }
   }
   debuggQueue(text: String): void {
-      this.spawnQueue.forEach((spawnRequest) => {
-        console.log(
-          text +": " +
-            JSON.stringify(spawnRequest.name + " - " + spawnRequest.priority, undefined, 4)
-        );
-      });
+    this.spawnQueue.forEach((spawnRequest) => {
+      console.log(JSON.stringify(spawnRequest, undefined, 4));
+      console.log(
+        text +
+          ": " +
+          JSON.stringify(spawnRequest.name + " - " + spawnRequest.priority, undefined, 4)
+      );
+    });
   }
   // Spawn visuals
   spawnVisuals(): void {

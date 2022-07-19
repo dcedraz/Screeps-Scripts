@@ -124,9 +124,12 @@ export class RoleHauler {
   }
 
   run() {
-    this.getDroppedEnergy();
-    this.getEnergyFromSourceContainers;
-    this.loadTowers();
-    this.storeEnergy();
+    if (this.creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+      this.loadTowers();
+      this.storeEnergy();
+    } else {
+      this.getDroppedEnergy();
+      this.getEnergyFromSourceContainers;
+    }
   }
 }

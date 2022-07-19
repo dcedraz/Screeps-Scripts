@@ -62,7 +62,9 @@ export class RoomInstance {
 
       // Spawn haulers
       if (this.roomCreeps.haulers.length < this.roomCreeps.harvesters.length) {
-        this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("hauler", 10));
+        this.roomSpawner.spawnQueueAdd(
+          this.roomCreeps.newInitialCreep("hauler", this.roomCreeps.harvesters.length < 2 ? 9 : 10)
+        );
       }
 
       // Spawn upgraders

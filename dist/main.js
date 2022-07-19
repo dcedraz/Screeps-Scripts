@@ -3245,7 +3245,7 @@ class SpawnerInstance {
     }
     run() {
         if (this.spawnQueue.length) {
-            //this.debuggQueue("BEFORE");  
+            //this.debuggQueue("BEFORE");
             this.spawnQueueSort();
             //this.debuggQueue("AFTER");
             this.spawnCreeps();
@@ -3254,7 +3254,9 @@ class SpawnerInstance {
     }
     debuggQueue(text) {
         this.spawnQueue.forEach((spawnRequest) => {
-            console.log(text + ": " +
+            console.log(JSON.stringify(spawnRequest, undefined, 4));
+            console.log(text +
+                ": " +
                 JSON.stringify(spawnRequest.name + " - " + spawnRequest.priority, undefined, 4));
         });
     }
@@ -3588,10 +3590,14 @@ class RoleHauler {
         return sortedTargets;
     }
     run() {
-        this.getDroppedEnergy();
-        this.getEnergyFromSourceContainers;
-        this.loadTowers();
-        this.storeEnergy();
+        if (this.creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+            this.loadTowers();
+            this.storeEnergy();
+        }
+        else {
+            this.getDroppedEnergy();
+            this.getEnergyFromSourceContainers;
+        }
     }
 }
 
@@ -4283,7 +4289,7 @@ class RoomInstance {
             }
             // Spawn haulers
             if (this.roomCreeps.haulers.length < this.roomCreeps.harvesters.length) {
-                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("hauler", 10));
+                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("hauler", this.roomCreeps.harvesters.length < 2 ? 9 : 10));
             }
             // Spawn upgraders
             if (this.roomCreeps.upgraders.length < 1) {
