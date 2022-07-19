@@ -1,3 +1,5 @@
+import { HelperFunctions } from "utils/HelperFunctions";
+
 export class SpawnerInstance {
   constructor(
     public room: Room,
@@ -23,6 +25,7 @@ export class SpawnerInstance {
           JSON.stringify(spawnRequest.name + " - " + spawnRequest.priority, undefined, 4)
       );
     });
+    // console.log(JSON.stringify(this.spawnQueue[0], undefined, 4));
   }
   // Spawn visuals
   spawnVisuals(): void {
@@ -41,12 +44,15 @@ export class SpawnerInstance {
     const spawnRequest = this.spawnQueue[0];
     this.assignSpawn(spawnRequest);
     if (spawnRequest.assignedSpawn) {
-      if (
-        spawnRequest.assignedSpawn.spawnCreep(spawnRequest.body, spawnRequest.name, {
-          memory: spawnRequest.memory,
-        })
-      ) {
-        this.spawnQueueRemove(spawnRequest);
+      let targetSpawn = HelperFunctions.findObjectWithID(spawnRequest.assignedSpawn);
+      if (targetSpawn) {
+        if (
+          targetSpawn.spawnCreep(spawnRequest.body, spawnRequest.name, {
+            memory: spawnRequest.memory,
+          })
+        ) {
+          this.spawnQueueRemove(spawnRequest);
+        }
       }
     }
   }
@@ -60,7 +66,7 @@ export class SpawnerInstance {
   assignSpawn(order: SpawnWorkOrder): void {
     for (const spawn in this.spawns) {
       if (!this.spawns[spawn].spawning) {
-        order.assignedSpawn = this.spawns[spawn];
+        order.assignedSpawn = this.spawns[spawn].id;
       }
     }
   }
