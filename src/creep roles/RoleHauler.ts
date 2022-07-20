@@ -26,8 +26,6 @@ export class RoleHauler {
           this.creep.moveTo(towers[0], { visualizePathStyle: { stroke: "#ffffff" } });
         }
         this.creep.transfer(towers[0], RESOURCE_ENERGY);
-      } else {
-        this.storeEnergy();
       }
     }
   }
@@ -111,6 +109,7 @@ export class RoleHauler {
         return (
           (HelperFunctions.isExtension(structure) ||
             HelperFunctions.isStorage(structure) ||
+            HelperFunctions.isTower(structure) ||
             HelperFunctions.isSpawn(structure)) &&
           structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0
         );
@@ -129,6 +128,11 @@ export class RoleHauler {
       }
     }
     for (let i = 0; i < targets.length; i++) {
+      if (HelperFunctions.isTower(targets[i])) {
+        sortedTargets.push(targets[i]);
+      }
+    }
+    for (let i = 0; i < targets.length; i++) {
       if (HelperFunctions.isStorage(targets[i])) {
         sortedTargets.push(targets[i]);
       }
@@ -138,7 +142,7 @@ export class RoleHauler {
 
   run() {
     if (this.creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
-      this.loadTowers();
+      this.storeEnergy();
     } else {
       this.getDroppedEnergy();
       this.getEnergyFromSourceContainers;
