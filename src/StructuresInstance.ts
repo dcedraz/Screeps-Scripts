@@ -349,9 +349,20 @@ export class StructuresInstance {
               this.matrixedCSite(path[i].x, path[i].y, STRUCTURE_ROAD);
             }
           }
-          this.matrixedCSite(path[path.length - 2].x, path[path.length - 2].y, STRUCTURE_CONTAINER);
+          let containerPos = this.r.getPositionAt(path[path.length - 2].x, path[path.length - 2].y);
+          if (containerPos) this.matrixedCSite(containerPos.x, containerPos.y, STRUCTURE_CONTAINER);
 
           this.r.memory.sourcesMapped.push(source.id);
+          //find creep assigned to source
+          let creeps = this.r.find(FIND_MY_CREEPS, {
+            filter: (creep) => creep.memory.assigned_source === source.id,
+          });
+          //assign container pos to creep memory
+          if (creeps.length > 0 && containerPos) {
+            creeps[0].memory.container_pos = containerPos;
+            this.r.memory.source_containers[source.id].push(containerPos);
+          }
+          
           this.roomCostMaxtrix.reset();
         }
       }

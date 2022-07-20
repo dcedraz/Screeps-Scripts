@@ -13,6 +13,9 @@ export class HelperFunctions {
   public static isSpawn(s: Structure): s is StructureSpawn {
     return s.structureType === STRUCTURE_SPAWN;
   }
+  public static isStorage(s: Structure): s is StructureStorage {
+    return s.structureType === STRUCTURE_STORAGE;
+  }
 
   public static isController(s: Structure): s is StructureController {
     return s.structureType === STRUCTURE_CONTROLLER;
@@ -25,6 +28,13 @@ export class HelperFunctions {
   public static findCarryPartsRequired = function (distance: number, income: number) {
     return (distance * 2 * income) / CARRY_CAPACITY;
   };
+
+  /**
+   * Uses a provided ID to find an object associated with it
+   */
+  public static findObjectWithID<T extends Id<any>>(ID: T): fromId<T> | undefined {
+    return Game.getObjectById(ID) || undefined;
+  }
 
   // check for hostile nearby
 
@@ -93,5 +103,20 @@ export class HelperFunctions {
       wall: [],
       rampart: [],
     };
+  }
+
+  public static getGreatestEnergyDrop(r: Room): Resource {
+    let dropped = r.find(FIND_DROPPED_RESOURCES, {
+      filter: (resource) => resource.resourceType == RESOURCE_ENERGY,
+    });
+    let maxEnergy = 0;
+    let targetResource = dropped[0];
+    for (const resource of dropped) {
+      if (resource.amount > maxEnergy) {
+        maxEnergy = resource.amount;
+        targetResource = resource;
+      }
+    }
+    return targetResource;
   }
 }

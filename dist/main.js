@@ -3237,92 +3237,6 @@ class ErrorMapper {
 // Cache previously mapped traces to improve performance
 ErrorMapper.cache = {};
 
-class SpawnerInstance {
-    constructor(room, spawns = room.find(FIND_MY_SPAWNS), spawnQueue = []) {
-        this.room = room;
-        this.spawns = spawns;
-        this.spawnQueue = spawnQueue;
-    }
-    run() {
-        if (this.spawnQueue.length) {
-            //this.debuggQueue("BEFORE");  
-            this.spawnQueueSort();
-            //this.debuggQueue("AFTER");
-            this.spawnCreeps();
-            this.spawnVisuals();
-        }
-    }
-    debuggQueue(text) {
-        this.spawnQueue.forEach((spawnRequest) => {
-            console.log(text + ": " +
-                JSON.stringify(spawnRequest.name + " - " + spawnRequest.priority, undefined, 4));
-        });
-    }
-    // Spawn visuals
-    spawnVisuals() {
-        for (const spawn of this.spawns) {
-            if (spawn.spawning) {
-                const spawningCreep = Game.creeps[spawn.spawning.name];
-                spawn.room.visual.text("🛠️" + spawningCreep.memory.role, spawn.pos.x + 1, spawn.pos.y, {
-                    align: "left",
-                    opacity: 0.8,
-                });
-            }
-        }
-    }
-    spawnCreeps() {
-        const spawnRequest = this.spawnQueue[0];
-        this.assignSpawn(spawnRequest);
-        if (spawnRequest.assignedSpawn) {
-            if (spawnRequest.assignedSpawn.spawnCreep(spawnRequest.body, spawnRequest.name, {
-                memory: spawnRequest.memory,
-            })) {
-                this.spawnQueueRemove(spawnRequest);
-            }
-        }
-    }
-    // sort queue by priority (ascending)
-    spawnQueueSort() {
-        this.spawnQueue.sort((a, b) => {
-            return a.priority - b.priority;
-        });
-    }
-    assignSpawn(order) {
-        for (const spawn in this.spawns) {
-            if (!this.spawns[spawn].spawning) {
-                order.assignedSpawn = this.spawns[spawn];
-            }
-        }
-    }
-    spawnQueueAdd(spawnRequest) {
-        this.spawnQueue.push(spawnRequest);
-        this.assignSpawn(spawnRequest);
-    }
-    spawnQueueRemove(spawnRequest) {
-        const index = this.spawnQueue.indexOf(spawnRequest);
-        if (index > -1) {
-            this.spawnQueue.splice(index, 1);
-        }
-    }
-    spawnQueueClear() {
-        this.spawnQueue = [];
-    }
-    spawnQueueSize() {
-        return this.spawnQueue.length;
-    }
-    spawnQueueContains(spawnRequest) {
-        return this.spawnQueue.indexOf(spawnRequest) > -1;
-    }
-    spawnQueueContainsName(name) {
-        for (const spawn in this.spawnQueue) {
-            if (this.spawnQueue[spawn].name === name) {
-                return true;
-            }
-        }
-        return false;
-    }
-}
-
 class HelperFunctions {
     static isTower(s) {
         return s.structureType === STRUCTURE_TOWER;
@@ -3336,11 +3250,20 @@ class HelperFunctions {
     static isSpawn(s) {
         return s.structureType === STRUCTURE_SPAWN;
     }
+    static isStorage(s) {
+        return s.structureType === STRUCTURE_STORAGE;
+    }
     static isController(s) {
         return s.structureType === STRUCTURE_CONTROLLER;
     }
     static printObjectById(id) {
         console.log(JSON.stringify(Game.getObjectById(id), undefined, 4));
+    }
+    /**
+     * Uses a provided ID to find an object associated with it
+     */
+    static findObjectWithID(ID) {
+        return Game.getObjectById(ID) || undefined;
     }
     // check for hostile nearby
     static isHostileNearby(structure) {
@@ -3370,6 +3293,20 @@ class HelperFunctions {
             wall: [],
             rampart: [],
         };
+    }
+    static getGreatestEnergyDrop(r) {
+        let dropped = r.find(FIND_DROPPED_RESOURCES, {
+            filter: (resource) => resource.resourceType == RESOURCE_ENERGY,
+        });
+        let maxEnergy = 0;
+        let targetResource = dropped[0];
+        for (const resource of dropped) {
+            if (resource.amount > maxEnergy) {
+                maxEnergy = resource.amount;
+                targetResource = resource;
+            }
+        }
+        return targetResource;
     }
 }
 HelperFunctions.findCarryPartsRequired = function (distance, income) {
@@ -3412,6 +3349,98 @@ HelperFunctions.memoizeRoomPositions = (fn, r) => {
     };
 };
 
+class SpawnerInstance {
+    constructor(room, spawns = room.find(FIND_MY_SPAWNS), spawnQueue = []) {
+        this.room = room;
+        this.spawns = spawns;
+        this.spawnQueue = spawnQueue;
+    }
+    run() {
+        if (this.spawnQueue.length) {
+            //this.debuggQueue("BEFORE");
+            this.spawnQueueSort();
+            //this.debuggQueue("AFTER");
+            this.spawnCreeps();
+            this.spawnVisuals();
+        }
+    }
+    debuggQueue(text) {
+        this.spawnQueue.forEach((spawnRequest) => {
+            console.log(JSON.stringify(spawnRequest, undefined, 4));
+            console.log(text +
+                ": " +
+                JSON.stringify(spawnRequest.name + " - " + spawnRequest.priority, undefined, 4));
+        });
+        // console.log(JSON.stringify(this.spawnQueue[0], undefined, 4));
+    }
+    // Spawn visuals
+    spawnVisuals() {
+        for (const spawn of this.spawns) {
+            if (spawn.spawning) {
+                const spawningCreep = Game.creeps[spawn.spawning.name];
+                spawn.room.visual.text("🛠️" + spawningCreep.memory.role, spawn.pos.x + 1, spawn.pos.y, {
+                    align: "left",
+                    opacity: 0.8,
+                });
+            }
+        }
+    }
+    spawnCreeps() {
+        const spawnRequest = this.spawnQueue[0];
+        this.assignSpawn(spawnRequest);
+        if (spawnRequest.assignedSpawn) {
+            let targetSpawn = HelperFunctions.findObjectWithID(spawnRequest.assignedSpawn);
+            if (targetSpawn) {
+                if (targetSpawn.spawnCreep(spawnRequest.body, spawnRequest.name, {
+                    memory: spawnRequest.memory,
+                })) {
+                    this.spawnQueueRemove(spawnRequest);
+                }
+            }
+        }
+    }
+    // sort queue by priority (ascending)
+    spawnQueueSort() {
+        this.spawnQueue.sort((a, b) => {
+            return a.priority - b.priority;
+        });
+    }
+    assignSpawn(order) {
+        for (const spawn in this.spawns) {
+            if (!this.spawns[spawn].spawning) {
+                order.assignedSpawn = this.spawns[spawn].id;
+            }
+        }
+    }
+    spawnQueueAdd(spawnRequest) {
+        this.spawnQueue.push(spawnRequest);
+        this.assignSpawn(spawnRequest);
+    }
+    spawnQueueRemove(spawnRequest) {
+        const index = this.spawnQueue.indexOf(spawnRequest);
+        if (index > -1) {
+            this.spawnQueue.splice(index, 1);
+        }
+    }
+    spawnQueueClear() {
+        this.spawnQueue = [];
+    }
+    spawnQueueSize() {
+        return this.spawnQueue.length;
+    }
+    spawnQueueContains(spawnRequest) {
+        return this.spawnQueue.indexOf(spawnRequest) > -1;
+    }
+    spawnQueueContainsName(name) {
+        for (const spawn in this.spawnQueue) {
+            if (this.spawnQueue[spawn].name === name) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
 class RoleHarvester {
     constructor(creep) {
         this.creep = creep;
@@ -3424,11 +3453,153 @@ class RoleHarvester {
             this.creep.repair(containers[0]);
         }
     }
+    giveEnergyToNerbyCreeps() {
+        let creeps = this.creep.pos.findInRange(FIND_MY_CREEPS, 1, {
+            filter: (creep) => creep.memory.role != "harvester",
+        });
+        if (creeps.length > 0) {
+            this.creep.transfer(creeps[0], RESOURCE_ENERGY);
+        }
+    }
+    runInitial() {
+        if (this.creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+            this.repairNerbyContainer();
+            this.giveEnergyToNerbyCreeps();
+        }
+        if (this.creep.memory.assigned_source) {
+            var source = Game.getObjectById(this.creep.memory.assigned_source);
+            let container;
+            if (source) {
+                container = source.pos.findInRange(FIND_STRUCTURES, 1, {
+                    filter: (structure) => HelperFunctions.isContainer(structure),
+                });
+            }
+            if (container && container.length > 0 && !this.creep.pos.isEqualTo(container[0])) {
+                this.creep.moveTo(container[0]);
+                if (source) {
+                    if (this.creep.harvest(source) == ERR_NOT_IN_RANGE) {
+                        this.creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
+                    }
+                }
+            }
+            else {
+                if (source) {
+                    if (this.creep.harvest(source) == ERR_NOT_IN_RANGE) {
+                        this.creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
+                    }
+                }
+            }
+        }
+        else {
+            var sources = this.creep.room.find(FIND_SOURCES);
+            if (this.creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
+                this.creep.moveTo(sources[0], { visualizePathStyle: { stroke: "#ffaa00" } });
+            }
+        }
+    }
+}
+
+class RoleHauler {
+    constructor(creep) {
+        this.creep = creep;
+    }
+    getEnergyFromStorage() {
+        let storage = this.creep.room.storage;
+        if (storage) {
+            if (!this.creep.pos.isNearTo(storage)) {
+                this.creep.moveTo(storage, { visualizePathStyle: { stroke: "#ffffff" } });
+            }
+            this.creep.withdraw(storage, RESOURCE_ENERGY);
+        }
+    }
+    loadTowers() {
+        let towers = this.creep.room.find(FIND_STRUCTURES, {
+            filter: (structure) => {
+                return (HelperFunctions.isTower(structure) && structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
+            },
+        });
+        if (this.creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+            if (towers.length > 0) {
+                if (!this.creep.pos.isNearTo(towers[0])) {
+                    this.creep.moveTo(towers[0], { visualizePathStyle: { stroke: "#ffffff" } });
+                }
+                this.creep.transfer(towers[0], RESOURCE_ENERGY);
+            }
+            else {
+                this.storeEnergy();
+            }
+        }
+    }
+    getEnergyFromSourceContainers() {
+        // Get all source containers from memory
+        let sourceContainers = this.creep.room.memory.source_containers;
+        let targetContainers = [];
+        Object.keys(sourceContainers).forEach((source) => {
+            for (const containerPos of sourceContainers[source]) {
+                let container = this.creep.room.lookForAt(LOOK_STRUCTURES, targetContainers[0])[0];
+                targetContainers.push(container);
+            }
+        });
+        if (targetContainers.length > 0) {
+            // Get the container with the most amount of energy
+            let targetContainer = targetContainers[0];
+            let maxEnergy = 0;
+            for (const container of targetContainers) {
+                if (container.store.getUsedCapacity(RESOURCE_ENERGY) > maxEnergy) {
+                    maxEnergy = container.store.getUsedCapacity(RESOURCE_ENERGY);
+                    targetContainer = container;
+                }
+            }
+            if (!this.creep.pos.isNearTo(targetContainer)) {
+                this.creep.moveTo(targetContainer, { visualizePathStyle: { stroke: "#ffffff" } });
+            }
+            this.creep.withdraw(targetContainer, RESOURCE_ENERGY);
+        }
+    }
+    getGreatestDroppedEnergy() {
+        let target = HelperFunctions.getGreatestEnergyDrop(this.creep.room);
+        if (target) {
+            if (!this.creep.pos.isNearTo(target)) {
+                this.creep.moveTo(target, { visualizePathStyle: { stroke: "#ffffff" } });
+            }
+            this.creep.pickup(target);
+        }
+    }
+    getDroppedEnergy() {
+        let source;
+        let droppedEnergyAtSource;
+        if (this.creep.memory.assigned_source) {
+            source = Game.getObjectById(this.creep.memory.assigned_source);
+        }
+        if (source) {
+            droppedEnergyAtSource = source.pos.findInRange(FIND_DROPPED_RESOURCES, 1);
+        }
+        if (droppedEnergyAtSource && droppedEnergyAtSource.length > 0) {
+            if (!this.creep.pos.isNearTo(droppedEnergyAtSource[0])) {
+                this.creep.moveTo(droppedEnergyAtSource[0], {
+                    visualizePathStyle: { stroke: "#ffffff" },
+                });
+            }
+            this.creep.pickup(droppedEnergyAtSource[0]);
+        }
+        else {
+            this.getGreatestDroppedEnergy();
+        }
+    }
+    storeEnergy() {
+        let targets = this.sortStorageTargetsByType();
+        if (targets.length > 0) {
+            if (!this.creep.pos.isNearTo(targets[0])) {
+                this.creep.moveTo(targets[0], { visualizePathStyle: { stroke: "#ffffff" } });
+            }
+            this.creep.transfer(targets[0], RESOURCE_ENERGY);
+        }
+    }
     sortStorageTargetsByType() {
         let targets = this.creep.room.find(FIND_STRUCTURES, {
             filter: (structure) => {
                 return ((HelperFunctions.isExtension(structure) ||
-                    HelperFunctions.isContainer(structure) ||
+                    HelperFunctions.isStorage(structure) ||
                     HelperFunctions.isSpawn(structure)) &&
                     structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
             },
@@ -3445,63 +3616,19 @@ class RoleHarvester {
             }
         }
         for (let i = 0; i < targets.length; i++) {
-            if (HelperFunctions.isContainer(targets[i])) {
+            if (HelperFunctions.isStorage(targets[i])) {
                 sortedTargets.push(targets[i]);
             }
         }
         return sortedTargets;
     }
-    findClosestSpawn() {
-        let spawn = this.creep.pos.findClosestByPath(FIND_MY_SPAWNS);
-        if (spawn) {
-            return spawn;
-        }
-        return this.creep.room.find(FIND_MY_SPAWNS)[0];
-    }
-    createPathToSource(path) {
-        if (path.length > 0) {
-            for (let i = 0; i < path.length - 2; i++) {
-                this.creep.room.createConstructionSite(path[i].x, path[i].y, STRUCTURE_ROAD);
-            }
-        }
-        this.creep.room.createConstructionSite(path[path.length - 2].x, path[path.length - 2].y, STRUCTURE_CONTAINER);
-    }
-    giveEnergyToNerbyBuilder() {
-        let builders = this.creep.pos.findInRange(FIND_MY_CREEPS, 1, {
-            filter: (creep) => creep.memory.role === "builder" || creep.memory.role === "upgrader",
-        });
-        if (builders.length > 0) {
-            this.creep.transfer(builders[0], RESOURCE_ENERGY);
-        }
-    }
-    runInitial() {
+    run() {
         if (this.creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
-            this.repairNerbyContainer();
-            this.giveEnergyToNerbyBuilder();
-        }
-        if (this.creep.store.getFreeCapacity() > 0) {
-            if (this.creep.memory.assigned_source) {
-                var source = Game.getObjectById(this.creep.memory.assigned_source);
-                if (source) {
-                    if (this.creep.harvest(source) == ERR_NOT_IN_RANGE) {
-                        this.creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
-                    }
-                }
-            }
-            else {
-                var sources = this.creep.room.find(FIND_SOURCES);
-                if (this.creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
-                    this.creep.moveTo(sources[0], { visualizePathStyle: { stroke: "#ffaa00" } });
-                }
-            }
+            this.loadTowers();
         }
         else {
-            var targets = this.sortStorageTargetsByType();
-            if (targets.length > 0) {
-                if (this.creep.transfer(targets[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                    this.creep.moveTo(targets[0], { visualizePathStyle: { stroke: "#ffffff" } });
-                }
-            }
+            this.getDroppedEnergy();
+            this.getEnergyFromSourceContainers;
         }
     }
 }
@@ -3545,16 +3672,6 @@ class RoleBuilder {
             }
         }
     }
-    getEnergyFromHarvester() {
-        const harvesters = this.creep.room.find(FIND_MY_CREEPS, {
-            filter: (creep) => creep.memory.role == "harvester",
-        });
-        if (harvesters.length > 0) {
-            if (!this.creep.pos.isNearTo(harvesters[0])) {
-                this.creep.moveTo(harvesters[0]);
-            }
-        }
-    }
     getEnergy() {
         var storage = this.creep.room.find(FIND_STRUCTURES, {
             filter: (structure) => {
@@ -3563,21 +3680,19 @@ class RoleBuilder {
                     (HelperFunctions.isSpawn(structure) && structure.store[RESOURCE_ENERGY] > 200));
             },
         });
-        var sources = this.creep.room.find(FIND_SOURCES, {
-            filter: (source) => !HelperFunctions.isCreepNearby(source),
-        });
+        let dropped = HelperFunctions.getGreatestEnergyDrop(this.creep.room);
         if (storage.length > 0) {
             if (this.creep.withdraw(storage[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
                 this.creep.moveTo(storage[0], { visualizePathStyle: { stroke: "#ffaa00" } });
             }
         }
-        else if (sources.length > 0) {
-            if (this.creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
-                this.creep.moveTo(sources[0], { visualizePathStyle: { stroke: "#ffaa00" } });
+        else if (dropped) {
+            if (!this.creep.pos.isNearTo(dropped)) {
+                this.creep.moveTo(dropped, { visualizePathStyle: { stroke: "#ffaa00" } });
             }
-        }
-        else {
-            this.getEnergyFromHarvester();
+            else {
+                this.creep.pickup(dropped);
+            }
         }
     }
     runBuild() {
@@ -3634,13 +3749,19 @@ class RoleUpgrader {
 }
 
 class CreepsInstance {
-    constructor(room, creeps = room.find(FIND_MY_CREEPS), harvesters = _.filter(creeps, (creep) => creep.memory.role == "harvester"), upgraders = _.filter(creeps, (creep) => creep.memory.role == "upgrader"), builders = _.filter(creeps, (creep) => creep.memory.role == "builder") // miners: Creep[] = _.filter(creeps, (creep) => creep.memory.role == 'miner'); // haulers: Creep[] = _.filter(creeps, (creep) => creep.memory.role == 'hauler');
-    ) {
+    constructor(room, creeps = room.find(FIND_MY_CREEPS), harvesters = _.filter(creeps, (creep) => creep.memory.role == "harvester"), haulers = _.filter(creeps, (creep) => creep.memory.role == "hauler"), upgraders = _.filter(creeps, (creep) => creep.memory.role == "upgrader"), builders = _.filter(creeps, (creep) => creep.memory.role == "builder"), MyCreepBodies = {
+        harvesters: [WORK, WORK, MOVE],
+        haulers: [CARRY, MOVE, CARRY, MOVE],
+        upgraders: [WORK, CARRY, MOVE],
+        builders: [WORK, CARRY, MOVE],
+    }) {
         this.room = room;
         this.creeps = creeps;
         this.harvesters = harvesters;
+        this.haulers = haulers;
         this.upgraders = upgraders;
         this.builders = builders;
+        this.MyCreepBodies = MyCreepBodies;
     }
     // make creep walk over road
     walkOverRoad(creep) {
@@ -3652,12 +3773,12 @@ class CreepsInstance {
             }
         }
     }
-    newInitialCreep(role, priory, source) {
+    newCreep(role, body, priory, source) {
         let name = "Initial_" + role + "-" + Game.time;
         let sourceId = source ? source.id : undefined;
         return {
             name: name,
-            body: [WORK, CARRY, MOVE],
+            body: body,
             memory: { role: role, working: false, room: this.room.name, assigned_source: sourceId },
             priority: priory,
         };
@@ -3668,6 +3789,9 @@ class CreepsInstance {
             const creep = this.creeps[creepName];
             if (creep.memory.role === "harvester") {
                 new RoleHarvester(creep).runInitial();
+            }
+            if (creep.memory.role === "hauler") {
+                new RoleHauler(creep).run();
             }
             if (creep.memory.role === "upgrader") {
                 new RoleUpgrader(creep).run();
@@ -4090,8 +4214,19 @@ class StructuresInstance {
                             this.matrixedCSite(path[i].x, path[i].y, STRUCTURE_ROAD);
                         }
                     }
-                    this.matrixedCSite(path[path.length - 2].x, path[path.length - 2].y, STRUCTURE_CONTAINER);
+                    let containerPos = this.r.getPositionAt(path[path.length - 2].x, path[path.length - 2].y);
+                    if (containerPos)
+                        this.matrixedCSite(containerPos.x, containerPos.y, STRUCTURE_CONTAINER);
                     this.r.memory.sourcesMapped.push(source.id);
+                    //find creep assigned to source
+                    let creeps = this.r.find(FIND_MY_CREEPS, {
+                        filter: (creep) => creep.memory.assigned_source === source.id,
+                    });
+                    //assign container pos to creep memory
+                    if (creeps.length > 0 && containerPos) {
+                        creeps[0].memory.container_pos = containerPos;
+                        this.r.memory.source_containers[source.id].push(containerPos);
+                    }
                     this.roomCostMaxtrix.reset();
                 }
             }
@@ -4129,9 +4264,8 @@ class RoomInstance {
             this.roomController.activateSafeMode();
         }
     }
-    findAvailableSources() {
-        return this.roomSources.filter((source) => this.roomCreeps.harvesters.filter((creep) => creep.memory.assigned_source === source.id)
-            .length === 0);
+    findAvailableSources(creeps) {
+        return this.roomSources.filter((source) => creeps.filter((creep) => creep.memory.assigned_source === source.id).length === 0);
     }
     run() {
         // activate safe mode if needed
@@ -4139,16 +4273,21 @@ class RoomInstance {
         // Spawn harvesters
         if (this.roomController) {
             if (this.roomCreeps.harvesters.length < this.roomSources.length) {
-                let targetSource = this.findAvailableSources()[0];
-                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("harvester", this.roomCreeps.harvesters.length < 2 ? 10 : 21, targetSource));
+                let targetSource = this.findAvailableSources(this.roomCreeps.harvesters)[0];
+                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newCreep("harvester", this.roomCreeps.MyCreepBodies.harvesters, this.roomCreeps.harvesters.length < 2 ? 10 : 21, targetSource));
+            }
+            // Spawn haulers
+            if (this.roomCreeps.haulers.length < this.roomCreeps.harvesters.length) {
+                let targetSource = this.findAvailableSources(this.roomCreeps.haulers)[0];
+                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newCreep("hauler", this.roomCreeps.MyCreepBodies.haulers, this.roomCreeps.harvesters.length < 2 ? 9 : 10, targetSource));
             }
             // Spawn upgraders
             if (this.roomCreeps.upgraders.length < 1) {
-                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("upgrader", 20));
+                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newCreep("upgrader", this.roomCreeps.MyCreepBodies.upgraders, 20));
             }
             // Spawn builders
             if (this.roomCreeps.builders.length < 1 && this.roomController.level > 1) {
-                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("builder", this.roomCreeps.builders.length < 1 ? 10 : 21));
+                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newCreep("builder", this.roomCreeps.MyCreepBodies.builders, this.roomCreeps.builders.length < 1 ? 10 : 21));
             }
         }
         this.roomCreeps.run();
@@ -4161,34 +4300,10 @@ class RoomInstance {
     }
 }
 
-// Usage:
-// At top of main: import MemHack from './MemHack'
-// At top of loop(): MemHack.pretick()
-// Thats it!
-const MemHack = {
-    memory: undefined,
-    parseTime: -1,
-    register() {
-        const start = Game.cpu.getUsed();
-        this.memory = Memory;
-        const end = Game.cpu.getUsed();
-        this.parseTime = end - start;
-        this.memory = RawMemory._parsed;
-    },
-    pretick() {
-        if (this.memory) {
-            delete global.Memory;
-            global.Memory = this.memory;
-            RawMemory._parsed = this.memory;
-        }
-    },
-};
-MemHack.register();
-
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 const loop = ErrorMapper.wrapLoop(() => {
-    MemHack.pretick();
+    // MemHack.pretick();
     // Automatically delete memory of missing creeps
     if (Game.time % 100 === 0) {
         for (const name in Memory.creeps) {
