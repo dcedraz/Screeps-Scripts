@@ -3468,12 +3468,25 @@ class RoleHarvester {
         }
         if (this.creep.memory.assigned_source) {
             var source = Game.getObjectById(this.creep.memory.assigned_source);
-            var container = this.creep.memory.container_pos;
-            if (container && !this.creep.pos.isEqualTo(container))
-                this.creep.moveTo(container);
+            let container;
             if (source) {
-                if (this.creep.harvest(source) == ERR_NOT_IN_RANGE) {
-                    this.creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
+                container = source.pos.findInRange(FIND_STRUCTURES, 1, {
+                    filter: (structure) => HelperFunctions.isContainer(structure),
+                });
+            }
+            if (container && container.length > 0 && !this.creep.pos.isEqualTo(container[0])) {
+                this.creep.moveTo(container[0]);
+                if (source) {
+                    if (this.creep.harvest(source) == ERR_NOT_IN_RANGE) {
+                        this.creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
+                    }
+                }
+            }
+            else {
+                if (source) {
+                    if (this.creep.harvest(source) == ERR_NOT_IN_RANGE) {
+                        this.creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
+                    }
                 }
             }
         }
