@@ -3512,9 +3512,9 @@ class RoleHauler {
                 }
                 this.creep.transfer(towers[0], RESOURCE_ENERGY);
             }
-        }
-        else {
-            this.getEnergyFromStorage();
+            else {
+                this.storeEnergy();
+            }
         }
     }
     getEnergyFromSourceContainers() {
@@ -3608,7 +3608,6 @@ class RoleHauler {
     run() {
         if (this.creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
             this.loadTowers();
-            this.storeEnergy();
         }
         else {
             this.getDroppedEnergy();

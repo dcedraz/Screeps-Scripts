@@ -26,9 +26,9 @@ export class RoleHauler {
           this.creep.moveTo(towers[0], { visualizePathStyle: { stroke: "#ffffff" } });
         }
         this.creep.transfer(towers[0], RESOURCE_ENERGY);
+      } else {
+        this.storeEnergy();
       }
-    } else {
-      this.getEnergyFromStorage();
     }
   }
 
@@ -135,7 +135,6 @@ export class RoleHauler {
   run() {
     if (this.creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
       this.loadTowers();
-      this.storeEnergy();
     } else {
       this.getDroppedEnergy();
       this.getEnergyFromSourceContainers;
