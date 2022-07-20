@@ -47,8 +47,9 @@ export class RoomInstance {
       if (this.roomCreeps.harvesters.length < this.roomSources.length) {
         let targetSource = this.findAvailableSources(this.roomCreeps.harvesters)[0];
         this.roomSpawner.spawnQueueAdd(
-          this.roomCreeps.newInitialCreep(
+          this.roomCreeps.newCreep(
             "harvester",
+            this.roomCreeps.MyCreepBodies.harvesters,
             this.roomCreeps.harvesters.length < 2 ? 10 : 21,
             targetSource
           )
@@ -60,8 +61,9 @@ export class RoomInstance {
         let targetSource = this.findAvailableSources(this.roomCreeps.haulers)[0];
 
         this.roomSpawner.spawnQueueAdd(
-          this.roomCreeps.newInitialCreep(
+          this.roomCreeps.newCreep(
             "hauler",
+            this.roomCreeps.MyCreepBodies.haulers,
             this.roomCreeps.harvesters.length < 2 ? 9 : 10,
             targetSource
           )
@@ -70,13 +72,13 @@ export class RoomInstance {
 
       // Spawn upgraders
       if (this.roomCreeps.upgraders.length < 1) {
-        this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("upgrader", 20));
+        this.roomSpawner.spawnQueueAdd(this.roomCreeps.newCreep("upgrader", this.roomCreeps.MyCreepBodies.upgraders, 20));
       }
 
       // Spawn builders
       if (this.roomCreeps.builders.length < 1 && this.roomController.level > 1) {
         this.roomSpawner.spawnQueueAdd(
-          this.roomCreeps.newInitialCreep("builder", this.roomCreeps.builders.length < 1 ? 10 : 21)
+          this.roomCreeps.newCreep("builder",this.roomCreeps.MyCreepBodies.builders, this.roomCreeps.builders.length < 1 ? 10 : 21)
         );
       }
     }

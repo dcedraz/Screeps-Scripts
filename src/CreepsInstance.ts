@@ -10,7 +10,13 @@ export class CreepsInstance {
     public harvesters: Creep[] = _.filter(creeps, (creep) => creep.memory.role == "harvester"),
     public haulers: Creep[] = _.filter(creeps, (creep) => creep.memory.role == "hauler"),
     public upgraders: Creep[] = _.filter(creeps, (creep) => creep.memory.role == "upgrader"),
-    public builders: Creep[] = _.filter(creeps, (creep) => creep.memory.role == "builder") // miners: Creep[] = _.filter(creeps, (creep) => creep.memory.role == 'miner'); // haulers: Creep[] = _.filter(creeps, (creep) => creep.memory.role == 'hauler');
+    public builders: Creep[] = _.filter(creeps, (creep) => creep.memory.role == "builder"),
+    public MyCreepBodies = {
+      harvesters: [WORK, WORK, MOVE],
+      haulers: [CARRY, MOVE, CARRY, MOVE],
+      upgraders: [WORK, CARRY, MOVE],
+      builders: [WORK, CARRY, MOVE],
+    }
   ) {}
 
   // make creep walk over road
@@ -24,12 +30,17 @@ export class CreepsInstance {
     }
   }
 
-  newInitialCreep(role: string, priory: number, source?: Source): SpawnWorkOrder {
+  newCreep(
+    role: string,
+    body: BodyPartConstant[],
+    priory: number,
+    source?: Source
+  ): SpawnWorkOrder {
     let name = "Initial_" + role + "-" + Game.time;
     let sourceId = source ? source.id : undefined;
     return {
       name: name,
-      body: [WORK, CARRY, MOVE],
+      body: body,
       memory: { role: role, working: false, room: this.room.name, assigned_source: sourceId },
       priority: priory,
     };
