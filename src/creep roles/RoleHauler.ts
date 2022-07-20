@@ -65,13 +65,29 @@ export class RoleHauler {
     }
   }
 
-  getDroppedEnergy() {
+  getGreatestDroppedEnergy() {
     let target = HelperFunctions.getGreatestEnergyDrop(this.creep.room);
     if (target) {
       if (!this.creep.pos.isNearTo(target)) {
         this.creep.moveTo(target, { visualizePathStyle: { stroke: "#ffffff" } });
       }
       this.creep.pickup(target);
+    }
+  }
+  getDroppedEnergy() {
+    if (this.creep.memory.assigned_source) {
+      let source = Game.getObjectById(this.creep.memory.assigned_source);
+      if (source) {
+        let droppedEnergy = source.pos.findInRange(FIND_DROPPED_RESOURCES, 1);
+        if (droppedEnergy.length > 0) {
+          if (!this.creep.pos.isNearTo(droppedEnergy[0])) {
+            this.creep.moveTo(droppedEnergy[0], { visualizePathStyle: { stroke: "#ffffff" } });
+          }
+          this.creep.pickup(droppedEnergy[0]);
+        }
+      } else {
+        this.getGreatestDroppedEnergy();
+      }
     }
   }
 

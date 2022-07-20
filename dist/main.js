@@ -3543,13 +3543,30 @@ class RoleHauler {
             this.creep.withdraw(targetContainer, RESOURCE_ENERGY);
         }
     }
-    getDroppedEnergy() {
+    getGreatestDroppedEnergy() {
         let target = HelperFunctions.getGreatestEnergyDrop(this.creep.room);
         if (target) {
             if (!this.creep.pos.isNearTo(target)) {
                 this.creep.moveTo(target, { visualizePathStyle: { stroke: "#ffffff" } });
             }
             this.creep.pickup(target);
+        }
+    }
+    getDroppedEnergy() {
+        if (this.creep.memory.assigned_source) {
+            let source = Game.getObjectById(this.creep.memory.assigned_source);
+            if (source) {
+                let droppedEnergy = source.pos.findInRange(FIND_DROPPED_RESOURCES, 1);
+                if (droppedEnergy.length > 0) {
+                    if (!this.creep.pos.isNearTo(droppedEnergy[0])) {
+                        this.creep.moveTo(droppedEnergy[0], { visualizePathStyle: { stroke: "#ffffff" } });
+                    }
+                    this.creep.pickup(droppedEnergy[0]);
+                }
+            }
+            else {
+                this.getGreatestDroppedEnergy();
+            }
         }
     }
     storeEnergy() {
@@ -4226,9 +4243,8 @@ class RoomInstance {
             this.roomController.activateSafeMode();
         }
     }
-    findAvailableSources() {
-        return this.roomSources.filter((source) => this.roomCreeps.harvesters.filter((creep) => creep.memory.assigned_source === source.id)
-            .length === 0);
+    findAvailableSources(creeps) {
+        return this.roomSources.filter((source) => creeps.filter((creep) => creep.memory.assigned_source === source.id).length === 0);
     }
     run() {
         // activate safe mode if needed
@@ -4236,12 +4252,13 @@ class RoomInstance {
         // Spawn harvesters
         if (this.roomController) {
             if (this.roomCreeps.harvesters.length < this.roomSources.length) {
-                let targetSource = this.findAvailableSources()[0];
+                let targetSource = this.findAvailableSources(this.roomCreeps.harvesters)[0];
                 this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("harvester", this.roomCreeps.harvesters.length < 2 ? 10 : 21, targetSource));
             }
             // Spawn haulers
             if (this.roomCreeps.haulers.length < this.roomCreeps.harvesters.length) {
-                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("hauler", this.roomCreeps.harvesters.length < 2 ? 9 : 10));
+                let targetSource = this.findAvailableSources(this.roomCreeps.haulers)[0];
+                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newInitialCreep("hauler", this.roomCreeps.harvesters.length < 2 ? 9 : 10, targetSource));
             }
             // Spawn upgraders
             if (this.roomCreeps.upgraders.length < 1) {

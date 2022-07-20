@@ -32,11 +32,9 @@ export class RoomInstance {
     }
   }
 
-  findAvailableSources(): Source[] {
+  findAvailableSources(creeps: Creep[]): Source[] {
     return this.roomSources.filter(
-      (source) =>
-        this.roomCreeps.harvesters.filter((creep) => creep.memory.assigned_source === source.id)
-          .length === 0
+      (source) => creeps.filter((creep) => creep.memory.assigned_source === source.id).length === 0
     );
   }
 
@@ -47,7 +45,7 @@ export class RoomInstance {
     // Spawn harvesters
     if (this.roomController) {
       if (this.roomCreeps.harvesters.length < this.roomSources.length) {
-        let targetSource = this.findAvailableSources()[0];
+        let targetSource = this.findAvailableSources(this.roomCreeps.harvesters)[0];
         this.roomSpawner.spawnQueueAdd(
           this.roomCreeps.newInitialCreep(
             "harvester",
@@ -59,8 +57,14 @@ export class RoomInstance {
 
       // Spawn haulers
       if (this.roomCreeps.haulers.length < this.roomCreeps.harvesters.length) {
+        let targetSource = this.findAvailableSources(this.roomCreeps.haulers)[0];
+
         this.roomSpawner.spawnQueueAdd(
-          this.roomCreeps.newInitialCreep("hauler", this.roomCreeps.harvesters.length < 2 ? 9 : 10)
+          this.roomCreeps.newInitialCreep(
+            "hauler",
+            this.roomCreeps.harvesters.length < 2 ? 9 : 10,
+            targetSource
+          )
         );
       }
 
