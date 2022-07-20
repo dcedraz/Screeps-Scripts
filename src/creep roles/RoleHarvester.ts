@@ -27,17 +27,13 @@ export class RoleHarvester {
       this.giveEnergyToNerbyCreeps();
     }
 
-    // if (this.creep.store.getFreeCapacity() > 0) {
     if (this.creep.memory.assigned_source) {
       var source = Game.getObjectById(this.creep.memory.assigned_source);
       var container = this.creep.memory.container_pos;
+      if (container && !this.creep.pos.isEqualTo(container)) this.creep.moveTo(container);
       if (source) {
         if (this.creep.harvest(source) == ERR_NOT_IN_RANGE) {
-          if (container) {
-            this.creep.moveTo(container, { visualizePathStyle: { stroke: "#ffaa00" } });
-          } else {
-            this.creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
-          }
+          this.creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
         }
       }
     } else {
@@ -46,13 +42,5 @@ export class RoleHarvester {
         this.creep.moveTo(sources[0], { visualizePathStyle: { stroke: "#ffaa00" } });
       }
     }
-    // } else {
-    //   var targets = this.sortStorageTargetsByType();
-    //   if (targets.length > 0) {
-    //     if (this.creep.transfer(targets[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-    //       this.creep.moveTo(targets[0], { visualizePathStyle: { stroke: "#ffffff" } });
-    //     }
-    //   }
-    // }
   }
 }

@@ -3294,6 +3294,20 @@ class HelperFunctions {
             rampart: [],
         };
     }
+    static getGreatestEnergyDrop(r) {
+        let dropped = r.find(FIND_DROPPED_RESOURCES, {
+            filter: (resource) => resource.resourceType == RESOURCE_ENERGY,
+        });
+        let maxEnergy = 0;
+        let targetResource = dropped[0];
+        for (const resource of dropped) {
+            if (resource.amount > maxEnergy) {
+                maxEnergy = resource.amount;
+                targetResource = resource;
+            }
+        }
+        return targetResource;
+    }
 }
 HelperFunctions.findCarryPartsRequired = function (distance, income) {
     return (distance * 2 * income) / CARRY_CAPACITY;
@@ -3452,18 +3466,14 @@ class RoleHarvester {
             this.repairNerbyContainer();
             this.giveEnergyToNerbyCreeps();
         }
-        // if (this.creep.store.getFreeCapacity() > 0) {
         if (this.creep.memory.assigned_source) {
             var source = Game.getObjectById(this.creep.memory.assigned_source);
             var container = this.creep.memory.container_pos;
+            if (container && !this.creep.pos.isEqualTo(container))
+                this.creep.moveTo(container);
             if (source) {
                 if (this.creep.harvest(source) == ERR_NOT_IN_RANGE) {
-                    if (container) {
-                        this.creep.moveTo(container, { visualizePathStyle: { stroke: "#ffaa00" } });
-                    }
-                    else {
-                        this.creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
-                    }
+                    this.creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
                 }
             }
         }
@@ -3473,14 +3483,6 @@ class RoleHarvester {
                 this.creep.moveTo(sources[0], { visualizePathStyle: { stroke: "#ffaa00" } });
             }
         }
-        // } else {
-        //   var targets = this.sortStorageTargetsByType();
-        //   if (targets.length > 0) {
-        //     if (this.creep.transfer(targets[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-        //       this.creep.moveTo(targets[0], { visualizePathStyle: { stroke: "#ffffff" } });
-        //     }
-        //   }
-        // }
     }
 }
 
@@ -3489,17 +3491,15 @@ class RoleHauler {
         this.creep = creep;
     }
     getEnergyFromStorage() {
-        this.creep.say("🔄 Storage");
         let storage = this.creep.room.storage;
         if (storage) {
             if (!this.creep.pos.isNearTo(storage)) {
-                this.creep.moveTo(storage);
+                this.creep.moveTo(storage, { visualizePathStyle: { stroke: "#ffffff" } });
             }
             this.creep.withdraw(storage, RESOURCE_ENERGY);
         }
     }
     loadTowers() {
-        this.creep.say("Towers");
         let towers = this.creep.room.find(FIND_STRUCTURES, {
             filter: (structure) => {
                 return (HelperFunctions.isTower(structure) && structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
@@ -3508,7 +3508,7 @@ class RoleHauler {
         if (this.creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
             if (towers.length > 0) {
                 if (!this.creep.pos.isNearTo(towers[0])) {
-                    this.creep.moveTo(towers[0]);
+                    this.creep.moveTo(towers[0], { visualizePathStyle: { stroke: "#ffffff" } });
                 }
                 this.creep.transfer(towers[0], RESOURCE_ENERGY);
             }
@@ -3518,7 +3518,6 @@ class RoleHauler {
         }
     }
     getEnergyFromSourceContainers() {
-        this.creep.say("🔄 Source Containers");
         // Get all source containers from memory
         let sourceContainers = this.creep.room.memory.source_containers;
         let targetContainers = [];
@@ -3539,29 +3538,25 @@ class RoleHauler {
                 }
             }
             if (!this.creep.pos.isNearTo(targetContainer)) {
-                this.creep.moveTo(targetContainer);
+                this.creep.moveTo(targetContainer, { visualizePathStyle: { stroke: "#ffffff" } });
             }
             this.creep.withdraw(targetContainer, RESOURCE_ENERGY);
         }
     }
     getDroppedEnergy() {
-        this.creep.say("🔄 Dropped");
-        let dropped = this.creep.room.find(FIND_DROPPED_RESOURCES, {
-            filter: (resource) => resource.resourceType == RESOURCE_ENERGY,
-        });
-        if (dropped.length > 0) {
-            if (!this.creep.pos.isNearTo(dropped[0])) {
-                this.creep.moveTo(dropped[0]);
+        let target = HelperFunctions.getGreatestEnergyDrop(this.creep.room);
+        if (target) {
+            if (!this.creep.pos.isNearTo(target)) {
+                this.creep.moveTo(target, { visualizePathStyle: { stroke: "#ffffff" } });
             }
-            this.creep.pickup(dropped[0]);
+            this.creep.pickup(target);
         }
     }
     storeEnergy() {
-        this.creep.say("Storaging energy");
         let targets = this.sortStorageTargetsByType();
         if (targets.length > 0) {
             if (!this.creep.pos.isNearTo(targets[0])) {
-                this.creep.moveTo(targets[0]);
+                this.creep.moveTo(targets[0], { visualizePathStyle: { stroke: "#ffffff" } });
             }
             this.creep.transfer(targets[0], RESOURCE_ENERGY);
         }
@@ -3644,16 +3639,6 @@ class RoleBuilder {
             }
         }
     }
-    getEnergyFromHarvester() {
-        const harvesters = this.creep.room.find(FIND_MY_CREEPS, {
-            filter: (creep) => creep.memory.role == "harvester",
-        });
-        if (harvesters.length > 0) {
-            if (!this.creep.pos.isNearTo(harvesters[0])) {
-                this.creep.moveTo(harvesters[0]);
-            }
-        }
-    }
     getEnergy() {
         var storage = this.creep.room.find(FIND_STRUCTURES, {
             filter: (structure) => {
@@ -3662,19 +3647,19 @@ class RoleBuilder {
                     (HelperFunctions.isSpawn(structure) && structure.store[RESOURCE_ENERGY] > 200));
             },
         });
-        var sources = this.creep.room.find(FIND_SOURCES);
+        let dropped = HelperFunctions.getGreatestEnergyDrop(this.creep.room);
         if (storage.length > 0) {
             if (this.creep.withdraw(storage[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
                 this.creep.moveTo(storage[0], { visualizePathStyle: { stroke: "#ffaa00" } });
             }
         }
-        else if (sources.length > 0) {
-            if (this.creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
-                this.creep.moveTo(sources[0], { visualizePathStyle: { stroke: "#ffaa00" } });
+        else if (dropped) {
+            if (!this.creep.pos.isNearTo(dropped)) {
+                this.creep.moveTo(dropped, { visualizePathStyle: { stroke: "#ffaa00" } });
             }
-        }
-        else {
-            this.getEnergyFromHarvester();
+            else {
+                this.creep.pickup(dropped);
+            }
         }
     }
     runBuild() {
