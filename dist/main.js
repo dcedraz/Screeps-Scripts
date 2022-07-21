@@ -3744,10 +3744,10 @@ class RoleUpgrader {
         else {
             var sources = this.creep.room.find(FIND_STRUCTURES, {
                 filter: (structure) => {
-                    return ((HelperFunctions.isContainer(structure) ||
-                        HelperFunctions.isExtension(structure) ||
-                        HelperFunctions.isSpawn(structure)) &&
-                        structure.store[RESOURCE_ENERGY] > 200);
+                    return ((HelperFunctions.isStorage(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
+                        (HelperFunctions.isContainer(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
+                        (HelperFunctions.isExtension(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
+                        (HelperFunctions.isSpawn(structure) && structure.store[RESOURCE_ENERGY] > 200));
                 },
             });
             if (sources.length > 0) {
