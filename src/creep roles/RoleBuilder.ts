@@ -44,6 +44,7 @@ export class RoleBuilder {
     var storage = this.creep.room.find(FIND_STRUCTURES, {
       filter: (structure) => {
         return (
+          (HelperFunctions.isStorage(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
           (HelperFunctions.isContainer(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
           (HelperFunctions.isExtension(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
           (HelperFunctions.isSpawn(structure) && structure.store[RESOURCE_ENERGY] > 200)
