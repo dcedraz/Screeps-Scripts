@@ -3259,6 +3259,9 @@ class HelperFunctions {
     static printObjectById(id) {
         console.log(JSON.stringify(Game.getObjectById(id), undefined, 4));
     }
+    static printObject(o) {
+        console.log(JSON.stringify(o, undefined, 4));
+    }
     /**
      * Uses a provided ID to find an object associated with it
      */
@@ -3469,15 +3472,6 @@ class RoleHarvester {
         if (this.creep.memory.assigned_source) {
             var source = Game.getObjectById(this.creep.memory.assigned_source);
             let container;
-<<<<<<< HEAD
-            if (source) {
-                container = source.pos.findInRange(FIND_STRUCTURES, 1, {
-                    filter: (structure) => HelperFunctions.isContainer(structure),
-                });
-            }
-            if (container && container.length > 0 && !this.creep.pos.isEqualTo(container[0])) {
-                this.creep.moveTo(container[0]);
-=======
             let containerExists;
             if (source) {
                 container = source.pos.findInRange(FIND_STRUCTURES, 1, {
@@ -3493,7 +3487,6 @@ class RoleHarvester {
                 if (!this.creep.pos.isEqualTo(container[0])) {
                     this.creep.moveTo(container[0]);
                 }
->>>>>>> master
                 if (source) {
                     if (this.creep.harvest(source) == ERR_NOT_IN_RANGE) {
                         this.creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
@@ -3501,11 +3494,7 @@ class RoleHarvester {
                 }
             }
             else {
-<<<<<<< HEAD
-                if (source) {
-=======
                 if (source && !containerExists) {
->>>>>>> master
                     if (this.creep.harvest(source) == ERR_NOT_IN_RANGE) {
                         this.creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
                     }
@@ -3525,61 +3514,6 @@ class RoleHauler {
     constructor(creep) {
         this.creep = creep;
     }
-<<<<<<< HEAD
-    getEnergyFromStorage() {
-        let storage = this.creep.room.storage;
-        if (storage) {
-            if (!this.creep.pos.isNearTo(storage)) {
-                this.creep.moveTo(storage, { visualizePathStyle: { stroke: "#ffffff" } });
-            }
-            this.creep.withdraw(storage, RESOURCE_ENERGY);
-        }
-    }
-    loadTowers() {
-        let towers = this.creep.room.find(FIND_STRUCTURES, {
-            filter: (structure) => {
-                return (HelperFunctions.isTower(structure) && structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
-            },
-        });
-        if (this.creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
-            if (towers.length > 0) {
-                if (!this.creep.pos.isNearTo(towers[0])) {
-                    this.creep.moveTo(towers[0], { visualizePathStyle: { stroke: "#ffffff" } });
-                }
-                this.creep.transfer(towers[0], RESOURCE_ENERGY);
-            }
-            else {
-                this.storeEnergy();
-            }
-        }
-    }
-    getEnergyFromSourceContainers() {
-        // Get all source containers from memory
-        let sourceContainers = this.creep.room.memory.source_containers;
-        let targetContainers = [];
-        Object.keys(sourceContainers).forEach((source) => {
-            for (const containerPos of sourceContainers[source]) {
-                let container = this.creep.room.lookForAt(LOOK_STRUCTURES, targetContainers[0])[0];
-                targetContainers.push(container);
-            }
-        });
-        if (targetContainers.length > 0) {
-            // Get the container with the most amount of energy
-            let targetContainer = targetContainers[0];
-            let maxEnergy = 0;
-            for (const container of targetContainers) {
-                if (container.store.getUsedCapacity(RESOURCE_ENERGY) > maxEnergy) {
-                    maxEnergy = container.store.getUsedCapacity(RESOURCE_ENERGY);
-                    targetContainer = container;
-                }
-            }
-            if (!this.creep.pos.isNearTo(targetContainer)) {
-                this.creep.moveTo(targetContainer, { visualizePathStyle: { stroke: "#ffffff" } });
-            }
-            this.creep.withdraw(targetContainer, RESOURCE_ENERGY);
-        }
-    }
-=======
     giveEnergyToNerbyCreeps() {
         let creeps = this.creep.pos.findInRange(FIND_MY_CREEPS, 1, {
             filter: (creep) => creep.memory.role === "builder" || creep.memory.role === "upgrader",
@@ -3617,7 +3551,6 @@ class RoleHauler {
     //     this.creep.withdraw(targetContainer, RESOURCE_ENERGY);
     //   }
     // }
->>>>>>> master
     getGreatestDroppedEnergy() {
         let target = HelperFunctions.getGreatestEnergyDrop(this.creep.room);
         if (target) {
@@ -3627,27 +3560,18 @@ class RoleHauler {
             this.creep.pickup(target);
         }
     }
-<<<<<<< HEAD
-    getDroppedEnergy() {
-        let source;
-        let droppedEnergyAtSource;
-=======
     getEnergy() {
         let source;
         let droppedEnergyAtSource;
         let source_container;
->>>>>>> master
         if (this.creep.memory.assigned_source) {
             source = Game.getObjectById(this.creep.memory.assigned_source);
         }
         if (source) {
             droppedEnergyAtSource = source.pos.findInRange(FIND_DROPPED_RESOURCES, 1);
-<<<<<<< HEAD
-=======
             source_container = source.pos.findInRange(FIND_STRUCTURES, 1, {
                 filter: (structure) => HelperFunctions.isContainer(structure),
             });
->>>>>>> master
         }
         if (droppedEnergyAtSource && droppedEnergyAtSource.length > 0) {
             if (!this.creep.pos.isNearTo(droppedEnergyAtSource[0])) {
@@ -3657,8 +3581,6 @@ class RoleHauler {
             }
             this.creep.pickup(droppedEnergyAtSource[0]);
         }
-<<<<<<< HEAD
-=======
         else if (source_container && source_container.length > 0) {
             if (!this.creep.pos.isNearTo(source_container[0])) {
                 this.creep.moveTo(source_container[0], {
@@ -3667,7 +3589,6 @@ class RoleHauler {
             }
             this.creep.withdraw(source_container[0], RESOURCE_ENERGY);
         }
->>>>>>> master
         else {
             this.getGreatestDroppedEnergy();
         }
@@ -3686,10 +3607,7 @@ class RoleHauler {
             filter: (structure) => {
                 return ((HelperFunctions.isExtension(structure) ||
                     HelperFunctions.isStorage(structure) ||
-<<<<<<< HEAD
-=======
                     HelperFunctions.isTower(structure) ||
->>>>>>> master
                     HelperFunctions.isSpawn(structure)) &&
                     structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
             },
@@ -3706,12 +3624,6 @@ class RoleHauler {
             }
         }
         for (let i = 0; i < targets.length; i++) {
-<<<<<<< HEAD
-            if (HelperFunctions.isStorage(targets[i])) {
-                sortedTargets.push(targets[i]);
-            }
-        }
-=======
             if (HelperFunctions.isTower(targets[i])) {
                 sortedTargets.push(targets[i]);
             }
@@ -3721,24 +3633,15 @@ class RoleHauler {
                 sortedTargets.push(targets[i]);
             }
         }
->>>>>>> master
         return sortedTargets;
     }
     run() {
         if (this.creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
-<<<<<<< HEAD
-            this.loadTowers();
-        }
-        else {
-            this.getDroppedEnergy();
-            this.getEnergyFromSourceContainers;
-=======
             this.giveEnergyToNerbyCreeps();
             this.storeEnergy();
         }
         else {
             this.getEnergy();
->>>>>>> master
         }
     }
 }
@@ -4381,6 +4284,8 @@ class RoomInstance {
     run() {
         // activate safe mode if needed
         this.runSafeMode();
+        console.log(this.room.cSites);
+        HelperFunctions.printObject(this.room.cSites);
         // Spawn harvesters
         if (this.roomController) {
             if (this.roomCreeps.harvesters.length < this.roomSources.length) {
@@ -4410,6 +4315,124 @@ class RoomInstance {
         // this.roomMyConstructionSites.run();
     }
 }
+
+// Usage:
+// At top of main: import MemHack from './MemHack'
+// At top of loop(): MemHack.pretick()
+// Thats it!
+const MemHack = {
+    memory: undefined,
+    parseTime: -1,
+    register() {
+        const start = Game.cpu.getUsed();
+        this.memory = Memory;
+        const end = Game.cpu.getUsed();
+        this.parseTime = end - start;
+        this.memory = RawMemory._parsed;
+    },
+    pretick() {
+        if (this.memory) {
+            delete global.Memory;
+            global.Memory = this.memory;
+            RawMemory._parsed = this.memory;
+        }
+    },
+};
+MemHack.register();
+
+const allStructureTypes = [
+    STRUCTURE_SPAWN,
+    STRUCTURE_EXTENSION,
+    STRUCTURE_ROAD,
+    STRUCTURE_WALL,
+    STRUCTURE_RAMPART,
+    STRUCTURE_KEEPER_LAIR,
+    STRUCTURE_PORTAL,
+    STRUCTURE_CONTROLLER,
+    STRUCTURE_LINK,
+    STRUCTURE_STORAGE,
+    STRUCTURE_TOWER,
+    STRUCTURE_OBSERVER,
+    STRUCTURE_POWER_BANK,
+    STRUCTURE_POWER_SPAWN,
+    STRUCTURE_EXTRACTOR,
+    STRUCTURE_LAB,
+    STRUCTURE_TERMINAL,
+    STRUCTURE_CONTAINER,
+    STRUCTURE_NUKER,
+    STRUCTURE_FACTORY,
+    STRUCTURE_INVADER_CORE,
+];
+Object.defineProperties(Room.prototype, {
+    sources: {
+        get() {
+            if (this._sources)
+                return this._sources;
+            if (!this.memory.sourceIds) {
+                this.memory.sourceIds = [];
+                for (const source of this.find(FIND_SOURCES))
+                    this.memory.sourceIds.push(source.id);
+            }
+            this._sources = [];
+            for (const sourceId of this.memory.sourceIds)
+                this._sources.push(HelperFunctions.findObjectWithID(sourceId));
+            return this._sources;
+        },
+    },
+    mineral: {
+        get() {
+            if (this._mineral)
+                return this._mineral;
+            return (this._mineral = this.find(FIND_MINERALS)[0]);
+        },
+    },
+    enemyCreeps: {
+        get() {
+            if (this._enemyCreeps)
+                return this._enemyCreeps;
+            return (this._enemyCreeps = this.find(FIND_HOSTILE_CREEPS));
+        },
+    },
+    structures: {
+        get() {
+            if (this._structures)
+                return this._structures;
+            // Construct storage of structures based on structureType
+            this._structures = {};
+            // Make array keys for each structureType
+            for (const structureType of allStructureTypes)
+                this._structures[structureType] = [];
+            // Group structures by structureType
+            for (const structure of this.find(FIND_STRUCTURES))
+                this._structures[structure.structureType].push(structure);
+            return this._structures;
+        },
+    },
+    cSites: {
+        get() {
+            if (this._cSites)
+                return this._cSites;
+            // Construct storage of structures based on structureType
+            this._cSites = {};
+            // Make array keys for each structureType
+            for (const structureType of allStructureTypes)
+                this._cSites[structureType] = [];
+            // Group cSites by structureType
+            for (const cSite of this.find(FIND_MY_CONSTRUCTION_SITES))
+                this._cSites[cSite.structureType].push(cSite);
+            return this._cSites;
+        },
+    },
+    droppedEnergy: {
+        get() {
+            if (this._droppedEnergy)
+                return this._droppedEnergy;
+            return (this._droppedEnergy = this.find(FIND_DROPPED_RESOURCES, {
+                filter: (resource) => resource.resourceType === RESOURCE_ENERGY,
+            }));
+        },
+    },
+});
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
