@@ -71,7 +71,7 @@ export class RoomInstance {
       }
 
       // Spawn upgraders
-      if (this.roomCreeps.upgraders.length < 1) {
+      if (this.roomCreeps.upgraders.length < 3) {
         this.roomSpawner.spawnQueueAdd(
           this.roomCreeps.newCreep("upgrader", this.roomCreeps.MyCreepBodies.upgraders, 20)
         );
