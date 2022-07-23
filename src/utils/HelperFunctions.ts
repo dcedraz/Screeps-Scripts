@@ -25,6 +25,10 @@ export class HelperFunctions {
     console.log(JSON.stringify(Game.getObjectById(id), undefined, 4));
   }
 
+  public static printObject(o: any) {
+    console.log(JSON.stringify(o, undefined, 4));
+  }
+
   public static findCarryPartsRequired = function (distance: number, income: number) {
     return (distance * 2 * income) / CARRY_CAPACITY;
   };

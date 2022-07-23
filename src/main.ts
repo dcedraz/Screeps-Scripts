@@ -1,6 +1,7 @@
 import { ErrorMapper } from "utils/ErrorMapper";
 import { RoomInstance } from "RoomInstance";
 import MemHack from "utils/memhack";
+import "utils/roomAdditions";
 
 declare global {
   /*
