@@ -3,7 +3,7 @@ import { HelperFunctions } from "utils/HelperFunctions";
 export class SpawnerInstance {
   constructor(
     public room: Room,
-    public spawns: StructureSpawn[] = room.find(FIND_MY_SPAWNS),
+    public spawns: StructureSpawn[] = room.structures.spawn,
     public spawnQueue: SpawnWorkOrder[] = []
   ) {}
 

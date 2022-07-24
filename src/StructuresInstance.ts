@@ -20,7 +20,7 @@ export class StructuresInstance {
       this.r
     );
     this.roomPositions = memoizedcalcRoomPositions(this.r.name);
-    // this.createVisuals();
+    this.createVisuals();
   }
 
   checkPositionsForRect(rect: {
@@ -55,7 +55,7 @@ export class StructuresInstance {
     console.log(`Calculating room positions for ${this.r.name}`);
 
     // Calculate Spawn positions
-    const initialSpawn = this.r.find(FIND_MY_SPAWNS)[0];
+    const initialSpawn = this.r.structures.spawn[0];
     const initialSpawnPos = initialSpawn.pos;
     const secondSpawnPos = this.checkPosOnMatrix(initialSpawn.pos.x - 3, initialSpawn.pos.y);
     const thirdSpawnPos = this.checkPosOnMatrix(initialSpawn.pos.x - 6, initialSpawn.pos.y);
@@ -329,7 +329,7 @@ export class StructuresInstance {
 
   createSourceStructures() {
     if (this.roomController && this.roomController.level > 1) {
-      let spawn = this.r.find(FIND_MY_SPAWNS)[0];
+      let spawn = this.r.structures.spawn[0];
       let initialPos = this.r.getPositionAt(spawn.pos.x, spawn.pos.y);
       let sources = this.roomSources;
       for (let source of sources) {
@@ -354,9 +354,8 @@ export class StructuresInstance {
 
           this.r.memory.sourcesMapped.push(source.id);
           //find creep assigned to source
-          let creeps = this.r.find(FIND_MY_CREEPS, {
-            filter: (creep) => creep.memory.assigned_source === source.id,
-          });
+          let creeps = this.r.myCreeps.filter((creep) => creep.memory.assigned_source === source.id,
+          );
           //assign container pos to creep memory
           if (creeps.length > 0 && containerPos) {
             creeps[0].memory.container_pos = containerPos;

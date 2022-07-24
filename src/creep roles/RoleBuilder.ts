@@ -2,7 +2,7 @@ import { HelperFunctions } from "utils/HelperFunctions";
 export class RoleBuilder {
   constructor(
     public creep: Creep,
-    public myConstructionSites: ConstructionSite[] = creep.room.find(FIND_CONSTRUCTION_SITES)
+    public myConstructionSites: ConstructionSite[] = creep.room.cSites
   ) {}
 
   run() {
@@ -15,11 +15,11 @@ export class RoleBuilder {
       this.creep.say("⚡ build");
     }
 
-    const repairSites = this.creep.room.find(FIND_STRUCTURES, {
-      filter: (structure) => {
+    const repairSites = this.creep.room.structures.filter(
+      (structure: { hits: number; hitsMax: number }) => {
         return structure.hits < structure.hitsMax;
-      },
-    });
+      }
+    );
 
     if (!this.creep.memory.working) {
       this.getEnergy();
@@ -41,15 +41,13 @@ export class RoleBuilder {
     }
   }
   getEnergy() {
-    var storage = this.creep.room.find(FIND_STRUCTURES, {
-      filter: (structure) => {
-        return (
-          (HelperFunctions.isStorage(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
-          (HelperFunctions.isContainer(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
-          (HelperFunctions.isExtension(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
-          (HelperFunctions.isSpawn(structure) && structure.store[RESOURCE_ENERGY] > 200)
-        );
-      },
+    var storage = this.creep.room.structures.filter((structure: Structure<StructureConstant>) => {
+      return (
+        (HelperFunctions.isStorage(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
+        (HelperFunctions.isContainer(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
+        (HelperFunctions.isExtension(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
+        (HelperFunctions.isSpawn(structure) && structure.store[RESOURCE_ENERGY] > 200)
+      );
     });
     let dropped = HelperFunctions.getGreatestEnergyDrop(this.creep.room);
 

@@ -59,7 +59,7 @@ export class RoleHarvester {
         }
       }
     } else {
-      var sources = this.creep.room.find(FIND_SOURCES);
+      var sources = this.creep.room.sources;
       if (this.creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
         this.creep.moveTo(sources[0], { visualizePathStyle: { stroke: "#ffaa00" } });
       }
