@@ -37,9 +37,9 @@ https://github.com/laverdet/screeps-steamless-client
    2. http://localhost:8080/(http://localhost:21025)/
 4. Auth mod commands:
    1. setPassword('Username', 'YourDesiredPassword')
-   2. 
 5. Admin common commands:
    1. system.resetAllData()
    2. system.pauseSimulation()
    3. utils.removeBots()
    4. utils.getStats()
+   5. system.setTickDuration(1000)

@@ -8,7 +8,7 @@ export class CostMatrix {
   runMemoized(): void {
     const memoizedMatrix = HelperFunctions.memoizeCostMatrix(this.calcMatrix.bind(this), this.r);
     this.deserialize(memoizedMatrix(this.r.name));
-    this.visualize(this.r.name, memoizedMatrix(this.r.name));
+    //this.visualize(this.r.name, memoizedMatrix(this.r.name));
   }
 
   calcMatrix(): string {

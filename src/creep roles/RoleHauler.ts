@@ -97,18 +97,17 @@ export class RoleHauler {
   }
 
   sortStorageTargetsByType(): Structure[] {
-    HelperFunctions.printObject(this.creep.room.structures);
-    let targets = this.creep.room.structures.filter((structure: Structure) => {
-      return (
-        (HelperFunctions.isExtension(structure) ||
-          HelperFunctions.isStorage(structure) ||
-          HelperFunctions.isTower(structure) ||
-          HelperFunctions.isSpawn(structure)) &&
-        structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-      );
-    });
-    console.log("Targets: ")
-    HelperFunctions.printObject(targets);
+    let targets = Object.values(this.creep.room.structures)
+      .reduce((a, b) => a.concat(b))
+      .filter((structure: Structure) => {
+        return (
+          (HelperFunctions.isExtension(structure) ||
+            HelperFunctions.isStorage(structure) ||
+            HelperFunctions.isTower(structure) ||
+            HelperFunctions.isSpawn(structure)) &&
+          structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+        );
+      });
 
     var sortedTargets: Structure[] = [];
     for (let i = 0; i < targets.length; i++) {

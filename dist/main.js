@@ -3470,15 +3470,9 @@ class RoleHarvester {
         if (this.creep.memory.assigned_source) {
             var source = Game.getObjectById(this.creep.memory.assigned_source);
             let container;
-            let containerExists;
             if (source) {
                 container = source.pos.findInRange(FIND_STRUCTURES, 1, {
                     filter: (structure) => HelperFunctions.isContainer(structure) && structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
-                });
-            }
-            if (source) {
-                containerExists = source.pos.findInRange(FIND_STRUCTURES, 1, {
-                    filter: (structure) => HelperFunctions.isContainer(structure),
                 });
             }
             if (container && container.length > 0) {
@@ -3492,7 +3486,7 @@ class RoleHarvester {
                 }
             }
             else {
-                if (source && !containerExists) {
+                if (source) {
                     if (this.creep.harvest(source) == ERR_NOT_IN_RANGE) {
                         this.creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
                     }
@@ -3601,7 +3595,9 @@ class RoleHauler {
         }
     }
     sortStorageTargetsByType() {
-        let targets = this.creep.room.structures.filter((structure) => {
+        let targets = Object.values(this.creep.room.structures)
+            .reduce((a, b) => a.concat(b))
+            .filter((structure) => {
             return ((HelperFunctions.isExtension(structure) ||
                 HelperFunctions.isStorage(structure) ||
                 HelperFunctions.isTower(structure) ||
@@ -3746,12 +3742,14 @@ class RoleUpgrader {
         }
     }
     sortStorageTargetsByType() {
-        let targets = this.creep.room.structures.filter((structure) => {
+        let targets = Object.values(this.creep.room.structures)
+            .reduce((a, b) => a.concat(b))
+            .filter((structure) => {
             return ((HelperFunctions.isExtension(structure) ||
                 HelperFunctions.isStorage(structure) ||
                 HelperFunctions.isContainer(structure) ||
                 HelperFunctions.isSpawn(structure)) &&
-                structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
+                structure.store.getUsedCapacity(RESOURCE_ENERGY) > 0);
         });
         var sortedTargets = [];
         for (let i = 0; i < targets.length; i++) {
@@ -3842,7 +3840,7 @@ class CostMatrix {
     runMemoized() {
         const memoizedMatrix = HelperFunctions.memoizeCostMatrix(this.calcMatrix.bind(this), this.r);
         this.deserialize(memoizedMatrix(this.r.name));
-        // this.visualize(this.r.name, memoizedMatrix(this.r.name));
+        //this.visualize(this.r.name, memoizedMatrix(this.r.name));
     }
     calcMatrix() {
         console.log("Calculating cost matrix for room: ", this.r.name);
@@ -3951,7 +3949,7 @@ class StructuresInstance {
     runMemoized() {
         const memoizedcalcRoomPositions = HelperFunctions.memoizeRoomPositions(this.calcRoomPositions.bind(this), this.r);
         this.roomPositions = memoizedcalcRoomPositions(this.r.name);
-        // this.createVisuals();
+        this.createVisuals();
     }
     checkPositionsForRect(rect) {
         let positions = [];
@@ -4328,6 +4326,30 @@ class RoomInstance {
     }
 }
 
+// Usage:
+// At top of main: import MemHack from './MemHack'
+// At top of loop(): MemHack.pretick()
+// Thats it!
+const MemHack = {
+    memory: undefined,
+    parseTime: -1,
+    register() {
+        const start = Game.cpu.getUsed();
+        this.memory = Memory;
+        const end = Game.cpu.getUsed();
+        this.parseTime = end - start;
+        this.memory = RawMemory._parsed;
+    },
+    pretick() {
+        if (this.memory) {
+            delete global.Memory;
+            global.Memory = this.memory;
+            RawMemory._parsed = this.memory;
+        }
+    },
+};
+MemHack.register();
+
 const allStructureTypes = [
     STRUCTURE_SPAWN,
     STRUCTURE_EXTENSION,
@@ -4439,7 +4461,7 @@ Object.defineProperties(Room.prototype, {
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 const loop = ErrorMapper.wrapLoop(() => {
-    // MemHack.pretick();
+    MemHack.pretick();
     // Automatically delete memory of missing creeps
     if (Game.time % 100 === 0) {
         for (const name in Memory.creeps) {
