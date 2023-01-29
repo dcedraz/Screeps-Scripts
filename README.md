@@ -43,3 +43,7 @@ https://github.com/laverdet/screeps-steamless-client
    3. utils.removeBots()
    4. utils.getStats()
    5. system.setTickDuration(1000)
+
+## Issues and TODOs
+1. WIP - Replace find methods with roomAdditions properties
+   1. Need to fix all filters to work with roomAdditions
