@@ -30,16 +30,9 @@ export class RoleHarvester {
     if (this.creep.memory.assigned_source) {
       var source = Game.getObjectById(this.creep.memory.assigned_source);
       let container;
-      let containerExists;
       if (source) {
         container = source.pos.findInRange(FIND_STRUCTURES, 1, {
           filter: (structure: Structure) => HelperFunctions.isContainer(structure) && structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
-        });
-      }
-      if (source) {
-        containerExists = source.pos.findInRange(FIND_STRUCTURES, 1, {
-          filter: (structure: Structure) =>
-            HelperFunctions.isContainer(structure),
         });
       }
       if (container && container.length > 0) {
@@ -52,7 +45,7 @@ export class RoleHarvester {
           }
         }
       } else {
-        if (source && !containerExists) {
+        if (source) {
           if (this.creep.harvest(source) == ERR_NOT_IN_RANGE) {
             this.creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
           }
