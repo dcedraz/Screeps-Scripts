@@ -31,7 +31,7 @@ https://github.com/laverdet/screeps-steamless-client
 ## Notes to run on private server
 
 1. Run the screeps server on docker
-2. Screeps server cli: 
+2. Screeps server cli: `just type "cli" in the docker terminal`
 3. Steamless client: `npx screeps-steamless-client`
    1. http://localhost:8080/(https://screeps.com)/
    2. http://localhost:8080/(http://localhost:21025)/
