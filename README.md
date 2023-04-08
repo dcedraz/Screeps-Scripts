@@ -43,6 +43,8 @@ https://github.com/laverdet/screeps-steamless-client
    3. utils.removeBots()
    4. utils.getStats()
    5. system.setTickDuration(1000)
+   6. Update controller and other objects:
+      > storage.db['rooms.objects'].update({ _id: 'idOfController' },{ $set: { level: 8 }})
 
 ## Issues and TODOs
 1. WIP - Replace find methods with roomAdditions properties
