@@ -50,6 +50,13 @@ Object.defineProperties(Room.prototype, {
       return (this._mineral = this.find(FIND_MINERALS)[0]);
     },
   },
+  myCreeps: {
+    get() {
+      if (this._myCreeps) return this._myCreeps;
+
+      return (this._myCreeps = this.find(FIND_MY_CREEPS));
+    },
+  },
   enemyCreeps: {
     get() {
       if (this._enemyCreeps) return this._enemyCreeps;
@@ -77,24 +84,31 @@ Object.defineProperties(Room.prototype, {
       return this._structures;
     },
   },
-  cSites: {
+  cSitesGrouped: {
     get() {
-      if (this._cSites) return this._cSites;
+      if (this._cSitesGrouped) return this._cSitesGrouped;
 
       // Construct storage of structures based on structureType
 
-      this._cSites = {} as any;
+      this._cSitesGrouped = {} as any;
 
       // Make array keys for each structureType
 
-      for (const structureType of allStructureTypes) this._cSites[structureType] = [];
+      for (const structureType of allStructureTypes) this._cSitesGrouped[structureType] = [];
 
       // Group cSites by structureType
 
       for (const cSite of this.find(FIND_MY_CONSTRUCTION_SITES))
-        this._cSites[cSite.structureType].push(cSite);
+        this._cSitesGrouped[cSite.structureType].push(cSite);
 
-      return this._cSites;
+      return this._cSitesGrouped;
+    },
+  },
+  cSites: {
+    get() {
+      if (this._cSites) return this._cSites;
+
+      return (this._cSites = this.find(FIND_MY_CONSTRUCTION_SITES));
     },
   },
   droppedEnergy: {

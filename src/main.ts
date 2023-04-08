@@ -42,6 +42,8 @@ declare global {
     readonly sources: Source[];
     _mineral: Mineral;
     readonly mineral: Mineral;
+    _myCreeps: Creep[];
+    readonly myCreeps: Creep[];
     _enemyCreeps: Creep[];
     readonly enemyCreeps: Creep[];
     _enemyAttackers: Creep[];
@@ -49,12 +51,15 @@ declare global {
     _structures: OrganizedStructures;
     // _structures: Partial<OrganizedStructures>;
     readonly structures: OrganizedStructures;
-    _cSites: Record<StructureConstant, ConstructionSite[]>;
-    readonly cSites: Record<StructureConstant, ConstructionSite[]>;
+    _cSitesGrouped: Record<StructureConstant, ConstructionSite[]>;
+    readonly cSitesGrouped: Record<StructureConstant, ConstructionSite[]>;
+    _cSites: ConstructionSite[];
+    readonly cSites: ConstructionSite[];
     _droppedEnergy: Resource[];
     readonly droppedEnergy: Resource[];
   }
   interface OrganizedStructures {
+    [key: string]: any;
     spawn: StructureSpawn[];
     extension: StructureExtension[];
     road: StructureRoad[];

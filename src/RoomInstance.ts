@@ -8,9 +8,9 @@ export class RoomInstance {
     public room: Room,
     public roomController: StructureController | undefined = room.controller,
     public roomSpawner: SpawnerInstance = new SpawnerInstance(room),
-    public roomSources: Source[] = room.find(FIND_SOURCES, {
-      filter: (source) => !HelperFunctions.isHostileNearby(source),
-    }),
+    public roomSources: Source[] = room.sources.filter(
+      (source) => !HelperFunctions.isHostileNearby(source)
+    ),
     public roomStructuresInstance: StructuresInstance = new StructuresInstance(room, roomSources),
     public roomCreeps: CreepsInstance = new CreepsInstance(room)
   ) {}

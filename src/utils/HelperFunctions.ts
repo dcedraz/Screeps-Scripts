@@ -110,9 +110,7 @@ export class HelperFunctions {
   }
 
   public static getGreatestEnergyDrop(r: Room): Resource {
-    let dropped = r.find(FIND_DROPPED_RESOURCES, {
-      filter: (resource) => resource.resourceType == RESOURCE_ENERGY,
-    });
+    let dropped = r.droppedEnergy;
     let maxEnergy = 0;
     let targetResource = dropped[0];
     for (const resource of dropped) {
@@ -122,5 +120,9 @@ export class HelperFunctions {
       }
     }
     return targetResource;
+  }
+
+  public static getRoomStructuresArray(r: Room): Structure[] {
+    return Object.values(r.structures).reduce((a, b) => a.concat(b));
   }
 }

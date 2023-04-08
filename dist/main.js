@@ -3298,9 +3298,7 @@ class HelperFunctions {
         };
     }
     static getGreatestEnergyDrop(r) {
-        let dropped = r.find(FIND_DROPPED_RESOURCES, {
-            filter: (resource) => resource.resourceType == RESOURCE_ENERGY,
-        });
+        let dropped = r.droppedEnergy;
         let maxEnergy = 0;
         let targetResource = dropped[0];
         for (const resource of dropped) {
@@ -3353,7 +3351,7 @@ HelperFunctions.memoizeRoomPositions = (fn, r) => {
 };
 
 class SpawnerInstance {
-    constructor(room, spawns = room.find(FIND_MY_SPAWNS), spawnQueue = []) {
+    constructor(room, spawns = room.structures.spawn, spawnQueue = []) {
         this.room = room;
         this.spawns = spawns;
         this.spawnQueue = spawnQueue;
@@ -3472,15 +3470,9 @@ class RoleHarvester {
         if (this.creep.memory.assigned_source) {
             var source = Game.getObjectById(this.creep.memory.assigned_source);
             let container;
-            let containerExists;
             if (source) {
                 container = source.pos.findInRange(FIND_STRUCTURES, 1, {
                     filter: (structure) => HelperFunctions.isContainer(structure) && structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
-                });
-            }
-            if (source) {
-                containerExists = source.pos.findInRange(FIND_STRUCTURES, 1, {
-                    filter: (structure) => HelperFunctions.isContainer(structure),
                 });
             }
             if (container && container.length > 0) {
@@ -3494,7 +3486,7 @@ class RoleHarvester {
                 }
             }
             else {
-                if (source && !containerExists) {
+                if (source) {
                     if (this.creep.harvest(source) == ERR_NOT_IN_RANGE) {
                         this.creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
                     }
@@ -3502,7 +3494,7 @@ class RoleHarvester {
             }
         }
         else {
-            var sources = this.creep.room.find(FIND_SOURCES);
+            var sources = this.creep.room.sources;
             if (this.creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
                 this.creep.moveTo(sources[0], { visualizePathStyle: { stroke: "#ffaa00" } });
             }
@@ -3603,14 +3595,14 @@ class RoleHauler {
         }
     }
     sortStorageTargetsByType() {
-        let targets = this.creep.room.find(FIND_STRUCTURES, {
-            filter: (structure) => {
-                return ((HelperFunctions.isExtension(structure) ||
-                    HelperFunctions.isStorage(structure) ||
-                    HelperFunctions.isTower(structure) ||
-                    HelperFunctions.isSpawn(structure)) &&
-                    structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
-            },
+        let targets = Object.values(this.creep.room.structures)
+            .reduce((a, b) => a.concat(b))
+            .filter((structure) => {
+            return ((HelperFunctions.isExtension(structure) ||
+                HelperFunctions.isStorage(structure) ||
+                HelperFunctions.isTower(structure) ||
+                HelperFunctions.isSpawn(structure)) &&
+                structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
         });
         var sortedTargets = [];
         for (let i = 0; i < targets.length; i++) {
@@ -3647,7 +3639,7 @@ class RoleHauler {
 }
 
 class RoleBuilder {
-    constructor(creep, myConstructionSites = creep.room.find(FIND_CONSTRUCTION_SITES)) {
+    constructor(creep, myConstructionSites = creep.room.cSites) {
         this.creep = creep;
         this.myConstructionSites = myConstructionSites;
     }
@@ -3660,10 +3652,8 @@ class RoleBuilder {
             this.creep.memory.working = true;
             this.creep.say("⚡ build");
         }
-        const repairSites = this.creep.room.find(FIND_STRUCTURES, {
-            filter: (structure) => {
-                return structure.hits < structure.hitsMax;
-            },
+        const repairSites = this.creep.room.structures.filter((structure) => {
+            return structure.hits < structure.hitsMax;
         });
         if (!this.creep.memory.working) {
             this.getEnergy();
@@ -3686,13 +3676,11 @@ class RoleBuilder {
         }
     }
     getEnergy() {
-        var storage = this.creep.room.find(FIND_STRUCTURES, {
-            filter: (structure) => {
-                return ((HelperFunctions.isStorage(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
-                    (HelperFunctions.isContainer(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
-                    (HelperFunctions.isExtension(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
-                    (HelperFunctions.isSpawn(structure) && structure.store[RESOURCE_ENERGY] > 200));
-            },
+        var storage = this.creep.room.structures.filter((structure) => {
+            return ((HelperFunctions.isStorage(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
+                (HelperFunctions.isContainer(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
+                (HelperFunctions.isExtension(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
+                (HelperFunctions.isSpawn(structure) && structure.store[RESOURCE_ENERGY] > 200));
         });
         let dropped = HelperFunctions.getGreatestEnergyDrop(this.creep.room);
         if (storage.length > 0) {
@@ -3754,14 +3742,14 @@ class RoleUpgrader {
         }
     }
     sortStorageTargetsByType() {
-        let targets = this.creep.room.find(FIND_STRUCTURES, {
-            filter: (structure) => {
-                return ((HelperFunctions.isExtension(structure) ||
-                    HelperFunctions.isStorage(structure) ||
-                    HelperFunctions.isContainer(structure) ||
-                    HelperFunctions.isSpawn(structure)) &&
-                    structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
-            },
+        let targets = Object.values(this.creep.room.structures)
+            .reduce((a, b) => a.concat(b))
+            .filter((structure) => {
+            return ((HelperFunctions.isExtension(structure) ||
+                HelperFunctions.isStorage(structure) ||
+                HelperFunctions.isContainer(structure) ||
+                HelperFunctions.isSpawn(structure)) &&
+                structure.store.getUsedCapacity(RESOURCE_ENERGY) > 0);
         });
         var sortedTargets = [];
         for (let i = 0; i < targets.length; i++) {
@@ -3789,7 +3777,7 @@ class RoleUpgrader {
 }
 
 class CreepsInstance {
-    constructor(room, creeps = room.find(FIND_MY_CREEPS), harvesters = _.filter(creeps, (creep) => creep.memory.role == "harvester"), haulers = _.filter(creeps, (creep) => creep.memory.role == "hauler"), upgraders = _.filter(creeps, (creep) => creep.memory.role == "upgrader"), builders = _.filter(creeps, (creep) => creep.memory.role == "builder"), MyCreepBodies = {
+    constructor(room, creeps = room.myCreeps, harvesters = _.filter(creeps, (creep) => creep.memory.role == "harvester"), haulers = _.filter(creeps, (creep) => creep.memory.role == "hauler"), upgraders = _.filter(creeps, (creep) => creep.memory.role == "upgrader"), builders = _.filter(creeps, (creep) => creep.memory.role == "builder"), MyCreepBodies = {
         harvesters: [WORK, WORK, MOVE],
         haulers: [CARRY, MOVE, CARRY, MOVE],
         upgraders: [WORK, CARRY, MOVE],
@@ -3852,14 +3840,14 @@ class CostMatrix {
     runMemoized() {
         const memoizedMatrix = HelperFunctions.memoizeCostMatrix(this.calcMatrix.bind(this), this.r);
         this.deserialize(memoizedMatrix(this.r.name));
-        // this.visualize(this.r.name, memoizedMatrix(this.r.name));
+        //this.visualize(this.r.name, memoizedMatrix(this.r.name));
     }
     calcMatrix() {
         console.log("Calculating cost matrix for room: ", this.r.name);
-        let sources = this.r.find(FIND_SOURCES);
-        let structures = this.r.find(FIND_STRUCTURES);
-        let constructionSites = this.r.find(FIND_CONSTRUCTION_SITES);
-        let creeps = this.r.find(FIND_MY_CREEPS);
+        let sources = this.r.sources;
+        let structures = this.r.structures;
+        let constructionSites = this.r.cSites;
+        let creeps = this.r.myCreeps;
         // set costs for terrain
         for (let y = 1; y < 49; y++) {
             for (let x = 1; x < 49; x++) {
@@ -3879,20 +3867,22 @@ class CostMatrix {
         for (let source of sources) {
             this.set(source.pos.x, source.pos.y, 255);
         }
-        for (let structure of structures) {
-            if (structure.structureType === STRUCTURE_ROAD) {
-                this.set(structure.pos.x, structure.pos.y, 255);
+        Object.keys(structures).forEach((structType) => {
+            for (const struct of structures[structType]) {
+                if (struct.structureType === STRUCTURE_ROAD) {
+                    this.set(struct.pos.x, struct.pos.y, 255);
+                }
+                else if (struct.structureType === STRUCTURE_CONTAINER) {
+                    this.set(struct.pos.x, struct.pos.y, 5);
+                }
+                else if (struct.structureType === STRUCTURE_RAMPART) {
+                    this.set(struct.pos.x, struct.pos.y, 255);
+                }
+                else if (struct.structureType !== STRUCTURE_WALL) {
+                    this.set(struct.pos.x, struct.pos.y, 255);
+                }
             }
-            else if (structure.structureType === STRUCTURE_CONTAINER) {
-                this.set(structure.pos.x, structure.pos.y, 5);
-            }
-            else if (structure.structureType === STRUCTURE_RAMPART) {
-                this.set(structure.pos.x, structure.pos.y, 255);
-            }
-            else if (structure.structureType !== STRUCTURE_WALL) {
-                this.set(structure.pos.x, structure.pos.y, 255);
-            }
-        }
+        });
         for (let creep of creeps) {
             this.set(creep.pos.x, creep.pos.y, 255);
         }
@@ -3959,7 +3949,7 @@ class StructuresInstance {
     runMemoized() {
         const memoizedcalcRoomPositions = HelperFunctions.memoizeRoomPositions(this.calcRoomPositions.bind(this), this.r);
         this.roomPositions = memoizedcalcRoomPositions(this.r.name);
-        // this.createVisuals();
+        this.createVisuals();
     }
     checkPositionsForRect(rect) {
         let positions = [];
@@ -3986,7 +3976,7 @@ class StructuresInstance {
     calcRoomPositions() {
         console.log(`Calculating room positions for ${this.r.name}`);
         // Calculate Spawn positions
-        const initialSpawn = this.r.find(FIND_MY_SPAWNS)[0];
+        const initialSpawn = this.r.structures.spawn[0];
         const initialSpawnPos = initialSpawn.pos;
         const secondSpawnPos = this.checkPosOnMatrix(initialSpawn.pos.x - 3, initialSpawn.pos.y);
         const thirdSpawnPos = this.checkPosOnMatrix(initialSpawn.pos.x - 6, initialSpawn.pos.y);
@@ -4235,7 +4225,7 @@ class StructuresInstance {
     }
     createSourceStructures() {
         if (this.roomController && this.roomController.level > 1) {
-            let spawn = this.r.find(FIND_MY_SPAWNS)[0];
+            let spawn = this.r.structures.spawn[0];
             let initialPos = this.r.getPositionAt(spawn.pos.x, spawn.pos.y);
             let sources = this.roomSources;
             for (let source of sources) {
@@ -4259,9 +4249,7 @@ class StructuresInstance {
                         this.matrixedCSite(containerPos.x, containerPos.y, STRUCTURE_CONTAINER);
                     this.r.memory.sourcesMapped.push(source.id);
                     //find creep assigned to source
-                    let creeps = this.r.find(FIND_MY_CREEPS, {
-                        filter: (creep) => creep.memory.assigned_source === source.id,
-                    });
+                    let creeps = this.r.myCreeps.filter((creep) => creep.memory.assigned_source === source.id);
                     //assign container pos to creep memory
                     if (creeps.length > 0 && containerPos) {
                         creeps[0].memory.container_pos = containerPos;
@@ -4280,9 +4268,7 @@ class StructuresInstance {
 }
 
 class RoomInstance {
-    constructor(room, roomController = room.controller, roomSpawner = new SpawnerInstance(room), roomSources = room.find(FIND_SOURCES, {
-        filter: (source) => !HelperFunctions.isHostileNearby(source),
-    }), roomStructuresInstance = new StructuresInstance(room, roomSources), roomCreeps = new CreepsInstance(room)) {
+    constructor(room, roomController = room.controller, roomSpawner = new SpawnerInstance(room), roomSources = room.sources.filter((source) => !HelperFunctions.isHostileNearby(source)), roomStructuresInstance = new StructuresInstance(room, roomSources), roomCreeps = new CreepsInstance(room)) {
         this.room = room;
         this.roomController = roomController;
         this.roomSpawner = roomSpawner;
@@ -4410,6 +4396,13 @@ Object.defineProperties(Room.prototype, {
             return (this._mineral = this.find(FIND_MINERALS)[0]);
         },
     },
+    myCreeps: {
+        get() {
+            if (this._myCreeps)
+                return this._myCreeps;
+            return (this._myCreeps = this.find(FIND_MY_CREEPS));
+        },
+    },
     enemyCreeps: {
         get() {
             if (this._enemyCreeps)
@@ -4432,19 +4425,26 @@ Object.defineProperties(Room.prototype, {
             return this._structures;
         },
     },
+    cSitesGrouped: {
+        get() {
+            if (this._cSitesGrouped)
+                return this._cSitesGrouped;
+            // Construct storage of structures based on structureType
+            this._cSitesGrouped = {};
+            // Make array keys for each structureType
+            for (const structureType of allStructureTypes)
+                this._cSitesGrouped[structureType] = [];
+            // Group cSites by structureType
+            for (const cSite of this.find(FIND_MY_CONSTRUCTION_SITES))
+                this._cSitesGrouped[cSite.structureType].push(cSite);
+            return this._cSitesGrouped;
+        },
+    },
     cSites: {
         get() {
             if (this._cSites)
                 return this._cSites;
-            // Construct storage of structures based on structureType
-            this._cSites = {};
-            // Make array keys for each structureType
-            for (const structureType of allStructureTypes)
-                this._cSites[structureType] = [];
-            // Group cSites by structureType
-            for (const cSite of this.find(FIND_MY_CONSTRUCTION_SITES))
-                this._cSites[cSite.structureType].push(cSite);
-            return this._cSites;
+            return (this._cSites = this.find(FIND_MY_CONSTRUCTION_SITES));
         },
     },
     droppedEnergy: {

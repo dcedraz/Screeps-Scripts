@@ -27,3 +27,25 @@ https://github.com/Jomik/screeps-server
 
 * `screeps-steamless-client`
 https://github.com/laverdet/screeps-steamless-client
+
+## Notes to run on private server
+
+1. Run the screeps server on docker
+2. Screeps server cli: `just type "cli" in the docker terminal`
+3. Steamless client: `npx screeps-steamless-client`
+   1. http://localhost:8080/(https://screeps.com)/
+   2. http://localhost:8080/(http://localhost:21025)/
+4. Auth mod commands:
+   1. setPassword('Username', 'YourDesiredPassword')
+5. Admin common commands:
+   1. system.resetAllData()
+   2. system.pauseSimulation()
+   3. utils.removeBots()
+   4. utils.getStats()
+   5. system.setTickDuration(1000)
+   6. Update controller and other objects:
+      > storage.db['rooms.objects'].update({ _id: 'idOfController' },{ $set: { level: 8 }})
+
+## Issues and TODOs
+1. WIP - Replace find methods with roomAdditions properties
+   1. Need to fix all filters to work with roomAdditions

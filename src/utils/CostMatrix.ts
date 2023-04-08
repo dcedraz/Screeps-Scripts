@@ -13,10 +13,10 @@ export class CostMatrix {
 
   calcMatrix(): string {
     console.log("Calculating cost matrix for room: ", this.r.name);
-    let sources = this.r.find(FIND_SOURCES);
-    let structures = this.r.find(FIND_STRUCTURES);
-    let constructionSites = this.r.find(FIND_CONSTRUCTION_SITES);
-    let creeps = this.r.find(FIND_MY_CREEPS);
+    let sources = this.r.sources;
+    let structures = this.r.structures;
+    let constructionSites = this.r.cSites;
+    let creeps = this.r.myCreeps;
 
     // set costs for terrain
     for (let y = 1; y < 49; y++) {
@@ -39,17 +39,19 @@ export class CostMatrix {
       this.set(source.pos.x, source.pos.y, 255);
     }
 
-    for (let structure of structures) {
-      if (structure.structureType === STRUCTURE_ROAD) {
-        this.set(structure.pos.x, structure.pos.y, 255);
-      } else if (structure.structureType === STRUCTURE_CONTAINER) {
-        this.set(structure.pos.x, structure.pos.y, 5);
-      } else if (structure.structureType === STRUCTURE_RAMPART) {
-        this.set(structure.pos.x, structure.pos.y, 255);
-      } else if (structure.structureType !== STRUCTURE_WALL) {
-        this.set(structure.pos.x, structure.pos.y, 255);
+    Object.keys(structures).forEach((structType) => {
+      for (const struct of structures[structType as keyof typeof structures]) {
+        if (struct.structureType === STRUCTURE_ROAD) {
+          this.set(struct.pos.x, struct.pos.y, 255);
+        } else if (struct.structureType === STRUCTURE_CONTAINER) {
+          this.set(struct.pos.x, struct.pos.y, 5);
+        } else if (struct.structureType === STRUCTURE_RAMPART) {
+          this.set(struct.pos.x, struct.pos.y, 255);
+        } else if (struct.structureType !== STRUCTURE_WALL) {
+          this.set(struct.pos.x, struct.pos.y, 255);
+        }
       }
-    }
+    });
 
     for (let creep of creeps) {
       this.set(creep.pos.x, creep.pos.y, 255);

@@ -30,17 +30,17 @@ export class RoleUpgrader {
   }
 
   sortStorageTargetsByType(): Structure[] {
-    let targets = this.creep.room.find(FIND_STRUCTURES, {
-      filter: (structure: Structure) => {
+    let targets = HelperFunctions.getRoomStructuresArray(this.creep.room).filter(
+      (structure: Structure) => {
         return (
           (HelperFunctions.isExtension(structure) ||
             HelperFunctions.isStorage(structure) ||
             HelperFunctions.isContainer(structure) ||
             HelperFunctions.isSpawn(structure)) &&
-          structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+          structure.store.getUsedCapacity(RESOURCE_ENERGY) > 0
         );
-      },
-    });
+      }
+    );
 
     var sortedTargets: Structure[] = [];
     for (let i = 0; i < targets.length; i++) {
