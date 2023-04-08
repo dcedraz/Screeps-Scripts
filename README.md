@@ -47,5 +47,9 @@ https://github.com/laverdet/screeps-steamless-client
       > storage.db['rooms.objects'].update({ _id: 'idOfController' },{ $set: { level: 8 }})
 
 ## Issues and TODOs
-1. WIP - Replace find methods with roomAdditions properties
-   1. Need to fix all filters to work with roomAdditions
+1. Fix issue with Spawns duplicating creeps
+2. Refactor Harvesters logic to only drop energy when Hauler exists
+3. Haulers should do something when there is no storage left
+4. Calculate how many builders are needed
+5. Build a visual status of the room
+6. Build logic for multiroom operation
