@@ -121,4 +121,8 @@ export class HelperFunctions {
     }
     return targetResource;
   }
+
+  public static getRoomStructuresArray(r: Room): Structure[] {
+    return Object.values(r.structures).reduce((a, b) => a.concat(b));
+  }
 }

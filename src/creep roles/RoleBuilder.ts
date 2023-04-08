@@ -15,7 +15,7 @@ export class RoleBuilder {
       this.creep.say("⚡ build");
     }
 
-    const repairSites = this.creep.room.structures.filter(
+    const repairSites = HelperFunctions.getRoomStructuresArray(this.creep.room).filter(
       (structure: { hits: number; hitsMax: number }) => {
         return structure.hits < structure.hitsMax;
       }
@@ -41,14 +41,16 @@ export class RoleBuilder {
     }
   }
   getEnergy() {
-    var storage = this.creep.room.structures.filter((structure: Structure<StructureConstant>) => {
-      return (
-        (HelperFunctions.isStorage(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
-        (HelperFunctions.isContainer(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
-        (HelperFunctions.isExtension(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
-        (HelperFunctions.isSpawn(structure) && structure.store[RESOURCE_ENERGY] > 200)
-      );
-    });
+    var storage = HelperFunctions.getRoomStructuresArray(this.creep.room).filter(
+      (structure: Structure<StructureConstant>) => {
+        return (
+          (HelperFunctions.isStorage(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
+          (HelperFunctions.isContainer(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
+          (HelperFunctions.isExtension(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
+          (HelperFunctions.isSpawn(structure) && structure.store[RESOURCE_ENERGY] > 200)
+        );
+      }
+    );
     let dropped = HelperFunctions.getGreatestEnergyDrop(this.creep.room);
 
     if (storage.length > 0) {
