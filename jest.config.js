@@ -30,6 +30,8 @@ module.exports = {
     '**/*.spec.ts',
     '!**/node_modules/**',
     '!**/dist/**'
-  ]
+  ],
+
+  setupFilesAfterEnv: ['./src/utils/roomAdditions.ts']
 
 };
