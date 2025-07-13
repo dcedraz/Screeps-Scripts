@@ -1,7 +1,7 @@
 import { mockInstanceOf } from 'screeps-jest';
 import { RoleBuilder } from '../../../src/creep_roles/RoleBuilder';
 
-jest.mock('../../src/utils/HelperFunctions', () => ({
+jest.mock('../../../src/utils/HelperFunctions', () => ({
   HelperFunctions: {
     getRoomStructuresArray: jest.fn(() => []),
     getGreatestEnergyDrop: jest.fn(() => null),
@@ -12,7 +12,7 @@ jest.mock('../../src/utils/HelperFunctions', () => ({
   }
 }));
 
-const HelperFunctions = require('../../src/utils/HelperFunctions').HelperFunctions;
+const HelperFunctions = require('../../../src/utils/HelperFunctions').HelperFunctions;
 
 describe('RoleBuilder', () => {
   it('switches to collecting when out of energy', () => {
