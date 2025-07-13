@@ -1,4 +1,4 @@
-import { mockGlobal, mockInstanceOf } from 'screeps-jest';
+import { mockInstanceOf } from 'screeps-jest';
 import { RoomInstance } from '../../src/RoomInstance';
 import { SpawnerInstance } from "SpawnerInstance";
 import { CreepsInstance } from "CreepsInstance";
