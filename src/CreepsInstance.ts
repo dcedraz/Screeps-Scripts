@@ -1,7 +1,7 @@
-import { RoleHarvester } from "creep roles/RoleHarvester";
-import { RoleHauler } from "creep roles/RoleHauler";
-import { RoleBuilder } from "creep roles/RoleBuilder";
-import { RoleUpgrader } from "creep roles/RoleUpgrader";
+import { RoleHarvester } from "creep_roles/RoleHarvester";
+import { RoleHauler } from "creep_roles/RoleHauler";
+import { RoleBuilder } from "creep_roles/RoleBuilder";
+import { RoleUpgrader } from "creep_roles/RoleUpgrader";
 
 export class CreepsInstance {
   constructor(
