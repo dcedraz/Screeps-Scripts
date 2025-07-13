@@ -1,5 +1,5 @@
 import { mockInstanceOf } from 'screeps-jest';
-import { RoleBuilder } from '../../src/creep_roles/RoleBuilder';
+import { RoleBuilder } from '../../../src/creep_roles/RoleBuilder';
 
 jest.mock('../../src/utils/HelperFunctions', () => ({
   HelperFunctions: {
