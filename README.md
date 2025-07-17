@@ -30,14 +30,15 @@ https://github.com/laverdet/screeps-steamless-client
 
 ## Notes to run on private server
 
-1. Run the screeps server on docker
-2. Screeps server cli: `just type "cli" in the docker terminal`
-3. Steamless client: `npx screeps-steamless-client`
+1. Initiate colima `colima start` and `colima stop`
+2. Run the screeps server with `docker-compose up`
+3. Screeps server cli: `docker-compose exec screeps cli`
+4. Steamless client: `npx screeps-steamless-client`
    1. http://localhost:8080/(https://screeps.com)/
    2. http://localhost:8080/(http://localhost:21025)/
-4. Auth mod commands:
+5. Auth mod commands:
    1. setPassword('Username', 'YourDesiredPassword')
-5. Admin common commands:
+6. Admin common commands:
    1. system.resetAllData()
    2. system.pauseSimulation()
    3. utils.removeBots()
@@ -47,5 +48,9 @@ https://github.com/laverdet/screeps-steamless-client
       > storage.db['rooms.objects'].update({ _id: 'idOfController' },{ $set: { level: 8 }})
 
 ## Issues and TODOs
-1. WIP - Replace find methods with roomAdditions properties
-   1. Need to fix all filters to work with roomAdditions
+1. Fix issue with Spawns duplicating creeps
+2. Refactor Harvesters logic to only drop energy when Hauler exists
+3. Haulers should do something when there is no storage left
+4. Calculate how many builders are needed
+5. Build a visual status of the room
+6. Build logic for multiroom operation
