@@ -78,7 +78,6 @@ storage.db['rooms.objects'].update({ _id: 'idOfController' },{ $set: { level: 8 
 ```
 
 ## Issues and TODOs
-* Remove unused folders (docs)
 * Remove Mocha and Chai
 * Refactor to functional programming
 1. Fix issue with Spawns duplicating creeps
