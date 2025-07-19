@@ -5,49 +5,82 @@
 
 The code is written within the src directory, the `.ts` files are converted into the `main.js` within the `dist` folder using rollup packager manager.
 
+## Getting Started
+
+1. Clone this repo locally and install all dependencies with `npm install` and `yarn`.
+2. Move or copy `.env.sample` to `.env` and update it with your [Steam API key](https://steamcommunity.com/dev/apikey).
+3. Move or copy `screeps.sample.json` to `screeps.json` and edit it with your credentials.
+    * For `main` and `sim` entries, update `token` with your Steam API key.
+    * For the `pserver` entry, update `username` and `password` with any values. This will be later on used to configure the auth mod (instructions below)
+4. Install [Screeps World](https://store.steampowered.com/app/464350/Screeps_World/) from steam.
+5. Install the [screeps-steamless-client](https://github.com/laverdet/screeps-steamless-client).
+    * `npm install -g screeps-steamless-client` to install
+    * `npx screeps-steamless-client` to run
+      * http://localhost:8080/(https://screeps.com)/
+      * http://localhost:8080/(http://localhost:21025/)/
+6. Run the local private server with `docker compose up -d`
+7. Configure credentials for your private server
+    * This is managed by [screepsmod-auth](https://github.com/ScreepsMods/screepsmod-auth)
+    * The credentials should be the same used in Step 3 above.
+    * Go to http://127.0.0.1:21025/authmod/password/, configure a new password and log into Steam.
+    * Open the server CLI with `docker compose exec screeps cli` and run `setPassword('Username', 'YourDesiredPassword')`
+8. You should be good to go!
+    * Make your code changes and push it to the branches with the following:
+        * `npm run push-main` to push to main/prod
+        * `npm run push-sim` to push to sim/dev
+        * `npm run push-pserver` to push to local private server
+
+
 ## Credits for code taken from someone else
 * `memHack` from here: https://github.com/glitchassassin/screeps/blob/master/src/types.d.ts
+
+* `RoomAdditions` - Better way to memoize on global by Marvin:
+https://github.com/The-International-Screeps-Bot/The-International-Open-Source/blob/Typescript/src/room/roomAdditions.ts
 
 ## Inspiring code snippets:
 * `Base planning algorithms` from here: https://github.com/CarsonBurke/Screeps-Tutorials/tree/Master/basePlanningAlgorithms
 * `screeps-snippets` from here: https://github.com/screepers/screeps-snippets
 
-### Things will need in the future:
-* better way to memoize on global by Marvin:
-https://github.com/The-International-Screeps-Bot/The-International-Open-Source/blob/Typescript/src/room/roomAdditions.ts
+## Plugins and helpers
 
+* `screeps-launcher` https://github.com/screepers/screeps-launcher
+* `screeps-server` by Jomik https://github.com/Jomik/screeps-server
+* `screeps-steamless-client` https://github.com/laverdet/screeps-steamless-client
+* `screeps-mods` https://github.com/ScreepsMods
+* `typed-screeps` https://github.com/screepers/typed-screeps
 
-* `screeps-launcher`
-https://github.com/screepers/screeps-launcher
+## Server commands
 
+* Reset the server:
+```bash
+system.resetAllData()
+```
+* Pause the simulation:
+```bash
+system.pauseSimulation()
+```
+* Remove bots:
+```bash
+utils.removeBots()
+```
+* Get stats:
+```bash
+utils.getStats()
+```
+* Set tick duration:
+```bash
+system.setTickDuration(1000)
+```
 
-* `screeps-server` by Jomik (this is another option for running a docker private server)
-https://github.com/Jomik/screeps-server
-
-
-* `screeps-steamless-client`
-https://github.com/laverdet/screeps-steamless-client
-
-## Notes to run on private server
-
-1. Initiate colima `colima start` and `colima stop`
-2. Run the screeps server with `docker-compose up`
-3. Screeps server cli: `docker-compose exec screeps cli`
-4. Steamless client: `npx screeps-steamless-client`
-   1. http://localhost:8080/(https://screeps.com)/
-   2. http://localhost:8080/(http://localhost:21025)/
-5. Auth mod commands:
-   1. setPassword('Username', 'YourDesiredPassword')
-6. Admin common commands:
-   1. system.resetAllData()
-   2. system.pauseSimulation()
-   3. utils.removeBots()
-   4. utils.getStats()
-   5. system.setTickDuration(1000)
-   6. Update controller and other objects:
-      > storage.db['rooms.objects'].update({ _id: 'idOfController' },{ $set: { level: 8 }})
+* Update controller and other objects:
+```bash
+storage.db['rooms.objects'].update({ _id: 'idOfController' },{ $set: { level: 8 }})
+```
 
 ## Issues and TODOs
+* Remove unused folders (docs)
+* Remove Mocha and Chai
+* Refactor to functional programming
 1. Fix issue with Spawns duplicating creeps
 2. Refactor Harvesters logic to only drop energy when Hauler exists
 3. Haulers should do something when there is no storage left
