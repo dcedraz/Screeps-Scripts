@@ -66,7 +66,7 @@
 
 ---
 
-## TDD & Tidy First Principles (Retained from previous instructions)
+## TDD/Tidy First Principles & Instructions
 
 - Always follow the TDD cycle: Red → Green → Refactor
 - Write the simplest failing test first
@@ -74,3 +74,4 @@
 - Refactor only after tests are passing
 - Separate structural and behavioral changes in commits
 - Validate structural changes do not alter behavior by running tests before and after
+- Avoid using Any for type definitions; Always try to use specific types from Screeps or TypeScript
