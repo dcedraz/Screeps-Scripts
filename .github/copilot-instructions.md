@@ -6,8 +6,7 @@
 - **Major Components:**
   - `src/`: Main source code. Key files: `main.ts`, `RoomInstance.ts`, `CreepsInstance.ts`, `StructuresInstance.ts`, `SpawnerInstance.ts`, `utils/`, and especially `utils/roomAdditions.ts` (performance-critical caching of game objects).
   - `creep roles/`: Specialized logic for each creep role (e.g., `RoleBuilder.ts`, `RoleHarvester.ts`).
-  - `test/src/`: All new test files (unit/integration/specs) must be placed here and written with Jest. Do **not** use Mocha or Chai for new tests—these are legacy frameworks from the starter kit and should be avoided going forward.
-  - `docs/`: Contains general Screeps development tips and best practices from the original starter kit. **Project-specific documentation is only in the root `README.md`.**
+  - `test/src/`: All new test files must be placed here and written with Jest.
 
 ## Build, Deploy, and Test Workflows
 
@@ -15,7 +14,7 @@
 - **Deploy:** Use `npm run push-main` to build and upload code to Screeps server (see `screeps.json` for config).
 - **Test:** 
   - **Unit/Integration:** All tests run via `npm test`. Test files must be in `test/src/` and named `*.spec.ts` or `*.test.ts`.
-  - **Testing Framework:** Use Jest with `screeps-jest` for mocking Screeps globals. Legacy Mocha/Chai tests exist but should not be used for new code.
+  - **Testing Framework:** Use Jest with `screeps-jest` for mocking Screeps globals.
   - **Test Setup:** Always mock Screeps globals (`Game`, `Memory`, etc.) at the top of each test file using `mockGlobal` from `screeps-jest`.
   - **Do not place test files in `src/`**—keep them in `test/src/` for clarity and maintainability.
 
