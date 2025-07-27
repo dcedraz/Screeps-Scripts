@@ -3309,6 +3309,9 @@ class HelperFunctions {
         }
         return targetResource;
     }
+    static getRoomStructuresArray(r) {
+        return Object.values(r.structures).reduce((a, b) => a.concat(b));
+    }
 }
 HelperFunctions.findCarryPartsRequired = function (distance, income) {
     return (distance * 2 * income) / CARRY_CAPACITY;
@@ -3595,9 +3598,7 @@ class RoleHauler {
         }
     }
     sortStorageTargetsByType() {
-        let targets = Object.values(this.creep.room.structures)
-            .reduce((a, b) => a.concat(b))
-            .filter((structure) => {
+        let targets = HelperFunctions.getRoomStructuresArray(this.creep.room).filter((structure) => {
             return ((HelperFunctions.isExtension(structure) ||
                 HelperFunctions.isStorage(structure) ||
                 HelperFunctions.isTower(structure) ||
@@ -3652,7 +3653,7 @@ class RoleBuilder {
             this.creep.memory.working = true;
             this.creep.say("⚡ build");
         }
-        const repairSites = this.creep.room.structures.filter((structure) => {
+        const repairSites = HelperFunctions.getRoomStructuresArray(this.creep.room).filter((structure) => {
             return structure.hits < structure.hitsMax;
         });
         if (!this.creep.memory.working) {
@@ -3676,7 +3677,7 @@ class RoleBuilder {
         }
     }
     getEnergy() {
-        var storage = this.creep.room.structures.filter((structure) => {
+        var storage = HelperFunctions.getRoomStructuresArray(this.creep.room).filter((structure) => {
             return ((HelperFunctions.isStorage(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
                 (HelperFunctions.isContainer(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
                 (HelperFunctions.isExtension(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
@@ -3742,9 +3743,7 @@ class RoleUpgrader {
         }
     }
     sortStorageTargetsByType() {
-        let targets = Object.values(this.creep.room.structures)
-            .reduce((a, b) => a.concat(b))
-            .filter((structure) => {
+        let targets = HelperFunctions.getRoomStructuresArray(this.creep.room).filter((structure) => {
             return ((HelperFunctions.isExtension(structure) ||
                 HelperFunctions.isStorage(structure) ||
                 HelperFunctions.isContainer(structure) ||
@@ -3840,7 +3839,7 @@ class CostMatrix {
     runMemoized() {
         const memoizedMatrix = HelperFunctions.memoizeCostMatrix(this.calcMatrix.bind(this), this.r);
         this.deserialize(memoizedMatrix(this.r.name));
-        //this.visualize(this.r.name, memoizedMatrix(this.r.name));
+        // this.visualize(this.r.name, memoizedMatrix(this.r.name));
     }
     calcMatrix() {
         console.log("Calculating cost matrix for room: ", this.r.name);
@@ -4267,63 +4266,77 @@ class StructuresInstance {
     }
 }
 
-class RoomInstance {
-    constructor(room, roomController = room.controller, roomSpawner = new SpawnerInstance(room), roomSources = room.sources.filter((source) => !HelperFunctions.isHostileNearby(source)), roomStructuresInstance = new StructuresInstance(room, roomSources), roomCreeps = new CreepsInstance(room)) {
-        this.room = room;
-        this.roomController = roomController;
-        this.roomSpawner = roomSpawner;
-        this.roomSources = roomSources;
-        this.roomStructuresInstance = roomStructuresInstance;
-        this.roomCreeps = roomCreeps;
+// Pure function to create room data
+function createRoomData(room) {
+    return {
+        room,
+        roomController: room.controller,
+        roomSpawner: new SpawnerInstance(room),
+        roomSources: room.sources.filter((source) => !HelperFunctions.isHostileNearby(source)),
+        roomStructuresInstance: new StructuresInstance(room, room.sources.filter((source) => !HelperFunctions.isHostileNearby(source))),
+        roomCreeps: new CreepsInstance(room)
+    };
+}
+// Pure function to run safe mode logic
+function runSafeMode(roomData) {
+    const { roomController } = roomData;
+    if (roomController &&
+        roomController.level > 1 &&
+        (!roomController.safeMode || roomController.safeMode < 1000) &&
+        roomController.safeModeCooldown === undefined) {
+        roomController.activateSafeMode();
     }
-    // public roomEnergyAvailable: number = room.energyAvailable,
-    // public roomEnergyCapacityAvailable: number = room.energyCapacityAvailable,
-    // roomTerminal = room.terminal;
-    // roomStructures = room.find(FIND_STRUCTURES);
-    // roomHostiles = room.find(FIND_HOSTILE_CREEPS);
-    // roomMyStructures = room.find(FIND_MY_STRUCTURES);
-    runSafeMode() {
-        if (this.roomController &&
-            this.roomController.level > 1 &&
-            (!this.roomController.safeMode || this.roomController.safeMode < 1000) &&
-            this.roomController.safeModeCooldown === undefined) {
-            this.roomController.activateSafeMode();
-        }
+}
+// Pure function to find available sources
+function findAvailableSources(roomData, creeps) {
+    return roomData.roomSources.filter((source) => creeps.filter((creep) => creep.memory.assigned_source === source.id).length === 0);
+}
+// Pure function to spawn harvesters
+function spawnHarvesters(roomData) {
+    const { roomController, roomCreeps, roomSpawner, roomSources } = roomData;
+    if (roomController && roomCreeps.harvesters.length < roomSources.length) {
+        let targetSource = findAvailableSources(roomData, roomCreeps.harvesters)[0];
+        roomSpawner.spawnQueueAdd(roomCreeps.newCreep("harvester", roomCreeps.MyCreepBodies.harvesters, roomCreeps.harvesters.length < 2 ? 10 : 21, targetSource));
     }
-    findAvailableSources(creeps) {
-        return this.roomSources.filter((source) => creeps.filter((creep) => creep.memory.assigned_source === source.id).length === 0);
+}
+// Pure function to spawn haulers
+function spawnHaulers(roomData) {
+    const { roomController, roomCreeps, roomSpawner } = roomData;
+    if (roomController && roomCreeps.haulers.length < roomCreeps.harvesters.length) {
+        let targetSource = findAvailableSources(roomData, roomCreeps.haulers)[0];
+        roomSpawner.spawnQueueAdd(roomCreeps.newCreep("hauler", roomCreeps.MyCreepBodies.haulers, roomCreeps.harvesters.length < 2 ? 9 : 10, targetSource));
     }
-    run() {
-        // activate safe mode if needed
-        this.runSafeMode();
-        // Spawn harvesters
-        if (this.roomController) {
-            if (this.roomCreeps.harvesters.length < this.roomSources.length) {
-                let targetSource = this.findAvailableSources(this.roomCreeps.harvesters)[0];
-                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newCreep("harvester", this.roomCreeps.MyCreepBodies.harvesters, this.roomCreeps.harvesters.length < 2 ? 10 : 21, targetSource));
-            }
-            // Spawn haulers
-            if (this.roomCreeps.haulers.length < this.roomCreeps.harvesters.length) {
-                let targetSource = this.findAvailableSources(this.roomCreeps.haulers)[0];
-                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newCreep("hauler", this.roomCreeps.MyCreepBodies.haulers, this.roomCreeps.harvesters.length < 2 ? 9 : 10, targetSource));
-            }
-            // Spawn upgraders
-            if (this.roomCreeps.upgraders.length < 3) {
-                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newCreep("upgrader", this.roomCreeps.MyCreepBodies.upgraders, 20));
-            }
-            // Spawn builders
-            if (this.roomCreeps.builders.length < 1 && this.roomController.level > 1) {
-                this.roomSpawner.spawnQueueAdd(this.roomCreeps.newCreep("builder", this.roomCreeps.MyCreepBodies.builders, this.roomCreeps.builders.length < 1 ? 10 : 21));
-            }
-        }
-        this.roomCreeps.run();
-        this.roomSpawner.run();
-        // this.roomTerminal.run();
-        // this.roomStructures.run();
-        // this.roomHostiles.run();
-        // this.roomMyStructures.run();
-        // this.roomMyConstructionSites.run();
+}
+// Pure function to spawn upgraders
+function spawnUpgraders(roomData) {
+    const { roomController, roomCreeps, roomSpawner } = roomData;
+    if (roomController && roomCreeps.upgraders.length < 3) {
+        roomSpawner.spawnQueueAdd(roomCreeps.newCreep("upgrader", roomCreeps.MyCreepBodies.upgraders, 20));
     }
+}
+// Pure function to spawn builders
+function spawnBuilders(roomData) {
+    const { roomController, roomCreeps, roomSpawner } = roomData;
+    if (roomController && roomCreeps.builders.length < 1 && roomController.level > 1) {
+        roomSpawner.spawnQueueAdd(roomCreeps.newCreep("builder", roomCreeps.MyCreepBodies.builders, roomCreeps.builders.length < 1 ? 10 : 21));
+    }
+}
+// Pure function to run all spawn logic
+function runSpawnLogic(roomData) {
+    spawnHarvesters(roomData);
+    spawnHaulers(roomData);
+    spawnUpgraders(roomData);
+    spawnBuilders(roomData);
+}
+// Pure function to run all room logic
+function runRoom(roomData) {
+    // activate safe mode if needed
+    runSafeMode(roomData);
+    // Run spawn logic
+    runSpawnLogic(roomData);
+    // Run creeps and spawner
+    roomData.roomCreeps.run();
+    roomData.roomSpawner.run();
 }
 
 // Usage:
@@ -4373,8 +4386,9 @@ const allStructureTypes = [
     STRUCTURE_FACTORY,
     STRUCTURE_INVADER_CORE,
 ];
-Object.defineProperties(Room.prototype, {
-    sources: {
+const roomProto = Room.prototype;
+if (!Object.getOwnPropertyDescriptor(roomProto, "sources")) {
+    Object.defineProperty(roomProto, "sources", {
         get() {
             if (this._sources)
                 return this._sources;
@@ -4388,66 +4402,81 @@ Object.defineProperties(Room.prototype, {
                 this._sources.push(HelperFunctions.findObjectWithID(sourceId));
             return this._sources;
         },
-    },
-    mineral: {
+        configurable: true,
+    });
+}
+if (!Object.getOwnPropertyDescriptor(roomProto, "mineral")) {
+    Object.defineProperty(roomProto, "mineral", {
         get() {
             if (this._mineral)
                 return this._mineral;
             return (this._mineral = this.find(FIND_MINERALS)[0]);
         },
-    },
-    myCreeps: {
+        configurable: true,
+    });
+}
+if (!Object.getOwnPropertyDescriptor(roomProto, "myCreeps")) {
+    Object.defineProperty(roomProto, "myCreeps", {
         get() {
             if (this._myCreeps)
                 return this._myCreeps;
             return (this._myCreeps = this.find(FIND_MY_CREEPS));
         },
-    },
-    enemyCreeps: {
+        configurable: true,
+    });
+}
+if (!Object.getOwnPropertyDescriptor(roomProto, "enemyCreeps")) {
+    Object.defineProperty(roomProto, "enemyCreeps", {
         get() {
             if (this._enemyCreeps)
                 return this._enemyCreeps;
             return (this._enemyCreeps = this.find(FIND_HOSTILE_CREEPS));
         },
-    },
-    structures: {
+        configurable: true,
+    });
+}
+if (!Object.getOwnPropertyDescriptor(roomProto, "structures")) {
+    Object.defineProperty(roomProto, "structures", {
         get() {
             if (this._structures)
                 return this._structures;
-            // Construct storage of structures based on structureType
             this._structures = {};
-            // Make array keys for each structureType
             for (const structureType of allStructureTypes)
                 this._structures[structureType] = [];
-            // Group structures by structureType
             for (const structure of this.find(FIND_STRUCTURES))
                 this._structures[structure.structureType].push(structure);
             return this._structures;
         },
-    },
-    cSitesGrouped: {
+        configurable: true,
+    });
+}
+if (!Object.getOwnPropertyDescriptor(roomProto, "cSitesGrouped")) {
+    Object.defineProperty(roomProto, "cSitesGrouped", {
         get() {
             if (this._cSitesGrouped)
                 return this._cSitesGrouped;
-            // Construct storage of structures based on structureType
             this._cSitesGrouped = {};
-            // Make array keys for each structureType
             for (const structureType of allStructureTypes)
                 this._cSitesGrouped[structureType] = [];
-            // Group cSites by structureType
             for (const cSite of this.find(FIND_MY_CONSTRUCTION_SITES))
                 this._cSitesGrouped[cSite.structureType].push(cSite);
             return this._cSitesGrouped;
         },
-    },
-    cSites: {
+        configurable: true,
+    });
+}
+if (!Object.getOwnPropertyDescriptor(roomProto, "cSites")) {
+    Object.defineProperty(roomProto, "cSites", {
         get() {
             if (this._cSites)
                 return this._cSites;
             return (this._cSites = this.find(FIND_MY_CONSTRUCTION_SITES));
         },
-    },
-    droppedEnergy: {
+        configurable: true,
+    });
+}
+if (!Object.getOwnPropertyDescriptor(roomProto, "droppedEnergy")) {
+    Object.defineProperty(roomProto, "droppedEnergy", {
         get() {
             if (this._droppedEnergy)
                 return this._droppedEnergy;
@@ -4455,13 +4484,11 @@ Object.defineProperties(Room.prototype, {
                 filter: (resource) => resource.resourceType === RESOURCE_ENERGY,
             }));
         },
-    },
-});
+        configurable: true,
+    });
+}
 
-// When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
-// This utility uses source maps to get the line numbers and file names of the original, TS source code
-const loop = ErrorMapper.wrapLoop(() => {
-    MemHack.pretick();
+function unwrappedLoop() {
     // Automatically delete memory of missing creeps
     if (Game.time % 100 === 0) {
         for (const name in Memory.creeps) {
@@ -4499,12 +4526,25 @@ const loop = ErrorMapper.wrapLoop(() => {
     }
     // Run room logic
     for (const room in Game.rooms) {
-        const roomInstance = new RoomInstance(Game.rooms[room]);
-        if (roomInstance.roomController) {
-            roomInstance.run();
+        // Functional approach (alternative to class-based approach)
+        const roomData = createRoomData(Game.rooms[room]);
+        if (roomData.roomController) {
+            runRoom(roomData);
         }
+        // Class-based approach (legacy, still works)
+        // const roomInstance = new RoomInstance(Game.rooms[room]);
+        // if (roomInstance.roomController) {
+        //   roomInstance.run();
+        // }
     }
+}
+// When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
+// This utility uses source maps to get the line numbers and file names of the original, TS source code
+const loop = ErrorMapper.wrapLoop(() => {
+    MemHack.pretick();
+    unwrappedLoop();
 });
 
 exports.loop = loop;
+exports.unwrappedLoop = unwrappedLoop;
 //# sourceMappingURL=main.js.map

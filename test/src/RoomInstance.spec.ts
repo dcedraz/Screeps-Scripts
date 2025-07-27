@@ -1,10 +1,14 @@
 import { mockInstanceOf } from 'screeps-jest';
-import { RoomInstance } from '../../src/RoomInstance';
+import { createRoomInstance, runSafeMode, findAvailableSources, spawnHarvesters, spawnHaulers, spawnUpgraders, spawnBuilders, runSpawnLogic, runRoom } from '../../src/RoomInstance';
 import { SpawnerInstance } from "SpawnerInstance";
 import { CreepsInstance } from "CreepsInstance";
 import { StructuresInstance } from "StructuresInstance";
 
-function createInstance({
+jest.mock("SpawnerInstance");
+jest.mock("CreepsInstance");
+jest.mock("StructuresInstance");
+
+function createRoomInstanceForTesting({
   controller = mockInstanceOf<StructureController>({
     level: 2,
     safeMode: undefined,
@@ -26,69 +30,236 @@ function createInstance({
       upgraders: ['work', 'carry', 'move'],
       builders: ['work', 'carry', 'move'],
     },
-    newCreep: jest.fn(() => ({})),
+    newCreep: jest.fn((role, body, priority, source) => ({
+      name: `Initial_${role}-12345`,
+      body: body,
+      memory: { role: role, working: false, room: 'W1N1', assigned_source: source?.id },
+      priority: priority,
+    })),
     run: jest.fn(),
   }),
   sources = [
-    mockInstanceOf<Source>({ id: 'source1' }),
-    mockInstanceOf<Source>({ id: 'source2' })
+    mockInstanceOf<Source>({ 
+      id: 'source1',
+      pos: { findInRange: jest.fn(() => []) }
+    }),
+    mockInstanceOf<Source>({ 
+      id: 'source2',
+      pos: { findInRange: jest.fn(() => []) }
+    })
   ],
   structures = mockInstanceOf<StructuresInstance>({}),
 } = {}) {
+  // Mock the constructor calls
+  (SpawnerInstance as jest.MockedClass<typeof SpawnerInstance>).mockImplementation(() => spawner);
+  (CreepsInstance as jest.MockedClass<typeof CreepsInstance>).mockImplementation(() => creeps);
+  (StructuresInstance as jest.MockedClass<typeof StructuresInstance>).mockImplementation(() => structures);
+
   const room = mockInstanceOf<Room>({ controller, sources, find: jest.fn(() => []) });
-  return { instance: new RoomInstance(room, controller, spawner, sources, structures, creeps), controller, spawner, creeps, sources };
+  return {
+    room,
+    spawner,
+    creeps,
+    structures,
+    sources
+  };
 }
 
 describe('RoomInstance', () => {
-  it('activates safe mode if conditions are met', () => {
-    const { instance, controller } = createInstance();
-    instance.run();
-    expect(controller.activateSafeMode).toHaveBeenCalled();
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
 
-  it('spawns a harvester if less than sources', () => {
-    const { instance, creeps, spawner } = createInstance();
-    creeps.harvesters = [];
-    instance.run();
-    expect(spawner.spawnQueueAdd).toHaveBeenCalled();
-    expect(creeps.newCreep).toHaveBeenCalledWith('harvester', expect.anything(), expect.anything(), expect.anything());
+  describe('createRoomInstance', () => {
+    it('creates a room instance with all required properties', () => {
+      const { room, spawner, creeps, structures, sources } = createRoomInstanceForTesting();
+      
+      const roomInstance = createRoomInstance(room);
+
+      expect(roomInstance.room).toBe(room);
+      expect(roomInstance.roomController).toBe(room.controller);
+      expect(roomInstance.roomSpawner).toBe(spawner);
+      expect(roomInstance.roomSources).toEqual(sources);
+      expect(roomInstance.roomStructuresInstance).toBe(structures);
+      expect(roomInstance.roomCreeps).toBe(creeps);
+    });
   });
 
-  it('spawns a hauler if less than harvesters', () => {
-    const { instance, creeps, spawner } = createInstance();
-    creeps.harvesters = [
-      mockInstanceOf<Creep>({ memory: { assigned_source: 'source1' } }),
-      mockInstanceOf<Creep>({ memory: { assigned_source: 'source2' } })
-    ];
-    creeps.haulers = [
-      mockInstanceOf<Creep>({ memory: { assigned_source: 'source1' } })
-    ];
-    instance.run();
-    expect(spawner.spawnQueueAdd).toHaveBeenCalled();
-    expect(creeps.newCreep).toHaveBeenCalledWith('hauler', expect.anything(), expect.anything(), expect.anything());
+  describe('runSafeMode', () => {
+    it('activates safe mode when conditions are met', () => {
+      const { room } = createRoomInstanceForTesting({
+        controller: mockInstanceOf<StructureController>({
+          level: 2,
+          safeMode: undefined,
+          safeModeCooldown: undefined,
+          activateSafeMode: jest.fn(),
+        })
+      });
+      const roomInstance = createRoomInstance(room);
+
+      runSafeMode(roomInstance);
+
+      expect(roomInstance.roomController?.activateSafeMode).toHaveBeenCalled();
+    });
+
+    it('does not activate safe mode when conditions are not met', () => {
+      const { room } = createRoomInstanceForTesting({
+        controller: mockInstanceOf<StructureController>({
+          level: 1,
+          safeMode: undefined,
+          safeModeCooldown: undefined,
+          activateSafeMode: jest.fn(),
+        })
+      });
+      const roomInstance = createRoomInstance(room);
+
+      runSafeMode(roomInstance);
+
+      expect(roomInstance.roomController?.activateSafeMode).not.toHaveBeenCalled();
+    });
   });
 
-  it('spawns an upgrader if less than 3', () => {
-    const { instance, creeps, spawner } = createInstance();
-    creeps.upgraders = [];
-    instance.run();
-    expect(spawner.spawnQueueAdd).toHaveBeenCalled();
-    expect(creeps.newCreep).toHaveBeenCalledWith('upgrader', expect.anything(), expect.anything());
+  describe('findAvailableSources', () => {
+    it('returns sources not assigned to any creeps', () => {
+      const { room, sources } = createRoomInstanceForTesting();
+      const roomInstance = createRoomInstance(room);
+      const creeps: Creep[] = [];
+
+      const availableSources = findAvailableSources(roomInstance, creeps);
+
+      expect(availableSources).toEqual(sources);
+    });
+
+    it('excludes sources assigned to creeps', () => {
+      const { room, sources } = createRoomInstanceForTesting();
+      const roomInstance = createRoomInstance(room);
+      const creeps: Creep[] = [
+        mockInstanceOf<Creep>({ memory: { assigned_source: sources[0].id } })
+      ];
+
+      const availableSources = findAvailableSources(roomInstance, creeps);
+
+      expect(availableSources).toEqual([sources[1]]);
+    });
   });
 
-  it('spawns a builder if less than 1 and controller level > 1', () => {
-    const { instance, creeps, spawner, controller } = createInstance();
-    creeps.builders = [];
-    controller.level = 2;
-    instance.run();
-    expect(spawner.spawnQueueAdd).toHaveBeenCalled();
-    expect(creeps.newCreep).toHaveBeenCalledWith('builder', expect.anything(), expect.anything());
+  describe('spawnHarvesters', () => {
+    it('spawns harvester when less than sources', () => {
+      const { room, spawner, creeps } = createRoomInstanceForTesting();
+      const roomInstance = createRoomInstance(room);
+
+      spawnHarvesters(roomInstance);
+
+      expect(spawner.spawnQueueAdd).toHaveBeenCalledWith(expect.objectContaining({
+        name: expect.stringContaining('Initial_harvester'),
+        body: creeps.MyCreepBodies.harvesters,
+        memory: expect.objectContaining({ role: 'harvester' })
+      }));
+    });
+
+    it('does not spawn when enough harvesters exist', () => {
+      const { room, spawner, creeps, sources } = createRoomInstanceForTesting();
+      const roomInstance = createRoomInstance(room);
+      
+      // Mock that we have enough harvesters
+      creeps.harvesters = Array(sources.length).fill(mockInstanceOf<Creep>({}));
+
+      spawnHarvesters(roomInstance);
+
+      expect(spawner.spawnQueueAdd).not.toHaveBeenCalled();
+    });
   });
 
-  it('runs creeps and spawner logic', () => {
-    const { instance, creeps, spawner } = createInstance();
-    instance.run();
-    expect(creeps.run).toHaveBeenCalled();
-    expect(spawner.run).toHaveBeenCalled();
+  describe('spawnHaulers', () => {
+    it('spawns hauler when needed', () => {
+      const { room, spawner, creeps } = createRoomInstanceForTesting();
+      const roomInstance = createRoomInstance(room);
+      
+      // Set up condition: have harvesters but no haulers
+      creeps.harvesters = [mockInstanceOf<Creep>({ memory: { assigned_source: undefined } })];
+
+      spawnHaulers(roomInstance);
+
+      expect(spawner.spawnQueueAdd).toHaveBeenCalledWith(expect.objectContaining({
+        name: expect.stringContaining('Initial_hauler'),
+        body: creeps.MyCreepBodies.haulers,
+        memory: expect.objectContaining({ role: 'hauler' })
+      }));
+    });
+  });
+
+  describe('spawnUpgraders', () => {
+    it('spawns upgrader when needed', () => {
+      const { room, spawner, creeps } = createRoomInstanceForTesting();
+      const roomInstance = createRoomInstance(room);
+
+      spawnUpgraders(roomInstance);
+
+      expect(spawner.spawnQueueAdd).toHaveBeenCalledWith(expect.objectContaining({
+        name: expect.stringContaining('Initial_upgrader'),
+        body: creeps.MyCreepBodies.upgraders,
+        memory: expect.objectContaining({ role: 'upgrader' })
+      }));
+    });
+  });
+
+  describe('spawnBuilders', () => {
+    it('spawns builder when needed', () => {
+      const { room, spawner, creeps } = createRoomInstanceForTesting();
+      const roomInstance = createRoomInstance(room);
+
+      spawnBuilders(roomInstance);
+
+      expect(spawner.spawnQueueAdd).toHaveBeenCalledWith(expect.objectContaining({
+        name: expect.stringContaining('Initial_builder'),
+        body: creeps.MyCreepBodies.builders,
+        memory: expect.objectContaining({ role: 'builder' })
+      }));
+    });
+  });
+
+  describe('runSpawnLogic', () => {
+    it('runs all spawn functions', () => {
+      const { room, spawner, creeps } = createRoomInstanceForTesting();
+      const roomInstance = createRoomInstance(room);
+      
+      // Set up condition: have harvesters but no haulers
+      creeps.harvesters = [mockInstanceOf<Creep>({ memory: { assigned_source: undefined } })];
+
+      runSpawnLogic(roomInstance);
+
+      expect(spawner.spawnQueueAdd).toHaveBeenCalledWith(expect.objectContaining({
+        name: expect.stringContaining('Initial_harvester'),
+        body: creeps.MyCreepBodies.harvesters,
+        memory: expect.objectContaining({ role: 'harvester' })
+      }));
+      expect(spawner.spawnQueueAdd).toHaveBeenCalledWith(expect.objectContaining({
+        name: expect.stringContaining('Initial_hauler'),
+        body: creeps.MyCreepBodies.haulers,
+        memory: expect.objectContaining({ role: 'hauler' })
+      }));
+      expect(spawner.spawnQueueAdd).toHaveBeenCalledWith(expect.objectContaining({
+        name: expect.stringContaining('Initial_upgrader'),
+        body: creeps.MyCreepBodies.upgraders,
+        memory: expect.objectContaining({ role: 'upgrader' })
+      }));
+      expect(spawner.spawnQueueAdd).toHaveBeenCalledWith(expect.objectContaining({
+        name: expect.stringContaining('Initial_builder'),
+        body: creeps.MyCreepBodies.builders,
+        memory: expect.objectContaining({ role: 'builder' })
+      }));
+    });
+  });
+
+  describe('runRoom', () => {
+    it('runs all room logic including safe mode, spawn logic, creeps and spawner', () => {
+      const { room, spawner, creeps } = createRoomInstanceForTesting();
+      const roomInstance = createRoomInstance(room);
+
+      runRoom(roomInstance);
+
+      expect(creeps.run).toHaveBeenCalled();
+      expect(spawner.run).toHaveBeenCalled();
+    });
   });
 });

@@ -17,8 +17,15 @@ describe("main loop", () => {
       roomController: true,
       run: mockRun,
     }));
+    const mockCreateRoomInstance = jest.fn().mockReturnValue({
+      roomController: true,
+      roomCreeps: { run: jest.fn() },
+      roomSpawner: { run: jest.fn() }
+    });
+    const mockRunRoom = jest.fn();
     jest.doMock("../../src/RoomInstance", () => ({
-      RoomInstance: mockRoomInstance,
+      createRoomInstance: mockCreateRoomInstance,
+      runRoom: mockRunRoom,
     }));
 
     const myController = mockInstanceOf<StructureController>({ my: true });
@@ -38,8 +45,8 @@ describe("main loop", () => {
     const { unwrappedLoop } = require("../../src/main");
     unwrappedLoop();
 
-    expect(mockRoomInstance).toHaveBeenCalledTimes(2);
-    expect(mockRun).toHaveBeenCalledTimes(2);
+    expect(mockCreateRoomInstance).toHaveBeenCalledTimes(2);
+    expect(mockRunRoom).toHaveBeenCalledTimes(2);
   });
 
   it("should delete memory of missing creeps", () => {

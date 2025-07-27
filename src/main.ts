@@ -1,5 +1,5 @@
 import { ErrorMapper } from "utils/ErrorMapper";
-import { RoomInstance } from "RoomInstance";
+import { createRoomInstance, runRoom } from "RoomInstance";
 import MemHack from "utils/memhack";
 import "utils/roomAdditions";
 
@@ -170,9 +170,10 @@ function unwrappedLoop(): void {
 
   // Run room logic
   for (const room in Game.rooms) {
-    const roomInstance = new RoomInstance(Game.rooms[room]);
+    // Functional approach
+    const roomInstance = createRoomInstance(Game.rooms[room]);
     if (roomInstance.roomController) {
-      roomInstance.run();
+      runRoom(roomInstance);
     }
   }
 }
