@@ -1,5 +1,5 @@
 import { mockInstanceOf, mockGlobal } from 'screeps-jest';
-import { SpawnerInstance } from '../../src/SpawnerInstance';
+import { createSpawnerInstance, runSpawner } from '../../src/SpawnerInstance';
 
 jest.mock('../../src/utils/HelperFunctions', () => ({
   HelperFunctions: {
@@ -34,9 +34,9 @@ describe('SpawnerInstance', () => {
 
   it('does nothing if spawnQueue is empty', () => {
     const room = mockInstanceOf<Room>({ structures: { spawn: [] } });
-    const spawner = new SpawnerInstance(room, []);
+    const spawner = createSpawnerInstance(room, []);
     spawner.spawnQueue = [];
-    expect(() => spawner.run()).not.toThrow();
+    expect(() => runSpawner(spawner)).not.toThrow();
   });
 
   it('spawns a creep and removes from queue if spawnQueue is not empty and spawnCreep succeeds', () => {
@@ -46,8 +46,8 @@ describe('SpawnerInstance', () => {
     const order = makeOrder({ assignedSpawn: 'spawn1' });
     HelperFunctions.findObjectWithID.mockReturnValue(spawn);
     const room = mockInstanceOf<Room>({ structures: { spawn: [spawn] } });
-    const spawner = new SpawnerInstance(room, [spawn], [order]);
-    spawner.run();
+    const spawner = createSpawnerInstance(room, [spawn], [order]);
+    runSpawner(spawner);
     expect(spawnCreepMock).toHaveBeenCalledWith(order.body, order.name, { memory: order.memory });
     expect(spawner.spawnQueue.find((o) => o.name === order.name)).toBeUndefined();
   });
@@ -57,10 +57,10 @@ describe('SpawnerInstance', () => {
     const order = makeOrder({ assignedSpawn: 'spawn1' });
     HelperFunctions.findObjectWithID.mockReturnValue(spawn);
     const room = mockInstanceOf<Room>({ structures: { spawn: [spawn] } });
-    const spawner = new SpawnerInstance(room, [spawn], [order]);
+    const spawner = createSpawnerInstance(room, [spawn], [order]);
     // Mock Game.creeps and memory for spawnVisuals
     mockGlobal('Game', { creeps: { creep1: { memory: { role: 'harvester' } } } });
-    spawner.run();
+    runSpawner(spawner);
     expect(spawn.room.visual.text).toHaveBeenCalledWith(
       expect.stringContaining('🛠️'),
       spawn.pos.x + 1,
@@ -76,8 +76,8 @@ describe('SpawnerInstance', () => {
     const order = makeOrder({ assignedSpawn: 'spawn1' });
     HelperFunctions.findObjectWithID.mockReturnValue(spawn);
     const room = mockInstanceOf<Room>({ structures: { spawn: [spawn] } });
-    const spawner = new SpawnerInstance(room, [spawn], [order]);
-    spawner.run();
+    const spawner = createSpawnerInstance(room, [spawn], [order]);
+    runSpawner(spawner);
     expect(spawner.spawnQueue.find((o) => o.name === order.name)).toBeDefined();
   });
 
@@ -89,14 +89,14 @@ describe('SpawnerInstance', () => {
     HelperFunctions.findObjectWithID.mockReturnValue(spawn);
     const room = mockInstanceOf<Room>({ structures: { spawn: [spawn] } });
     // Put higher priority order first to test sorting
-    const spawner = new SpawnerInstance(room, [spawn], [order1, order2]);
-    spawner.run();
+    const spawner = createSpawnerInstance(room, [spawn], [order1, order2]);
+    runSpawner(spawner);
     // The first spawned creep should be the one with lower priority value (order2)
     expect(spawnCreepMock).toHaveBeenCalledWith(order2.body, order2.name, { memory: order2.memory });
     expect(spawner.spawnQueue.find((o) => o.name === order2.name)).toBeUndefined();
     expect(spawner.spawnQueue.find((o) => o.name === order1.name)).toBeDefined();
     // Now run again to spawn the next creep
-    spawner.run();
+    runSpawner(spawner);
     expect(spawnCreepMock).toHaveBeenCalledWith(order1.body, order1.name, { memory: order1.memory });
     expect(spawner.spawnQueue.find((o) => o.name === order1.name)).toBeUndefined();
   });

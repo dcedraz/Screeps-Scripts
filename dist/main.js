@@ -3353,95 +3353,69 @@ HelperFunctions.memoizeRoomPositions = (fn, r) => {
     };
 };
 
-class SpawnerInstance {
-    constructor(room, spawns = room.structures.spawn, spawnQueue = []) {
-        this.room = room;
-        this.spawns = spawns;
-        this.spawnQueue = spawnQueue;
+function createSpawnerInstance(room, spawns = room.structures.spawn, spawnQueue = []) {
+    return {
+        room,
+        spawns,
+        spawnQueue
+    };
+}
+function runSpawner(spawnerInstance) {
+    if (spawnerInstance.spawnQueue.length) {
+        //debuggQueue(spawnerInstance, "BEFORE");
+        spawnQueueSort(spawnerInstance);
+        //debuggQueue(spawnerInstance, "AFTER");
+        spawnCreeps(spawnerInstance);
+        spawnVisuals(spawnerInstance);
     }
-    run() {
-        if (this.spawnQueue.length) {
-            //this.debuggQueue("BEFORE");
-            this.spawnQueueSort();
-            //this.debuggQueue("AFTER");
-            this.spawnCreeps();
-            this.spawnVisuals();
+}
+// Spawn visuals
+function spawnVisuals(spawnerInstance) {
+    for (const spawn of spawnerInstance.spawns) {
+        if (spawn.spawning) {
+            const spawningCreep = Game.creeps[spawn.spawning.name];
+            spawn.room.visual.text("🛠️" + spawningCreep.memory.role, spawn.pos.x + 1, spawn.pos.y, {
+                align: "left",
+                opacity: 0.8,
+            });
         }
     }
-    debuggQueue(text) {
-        this.spawnQueue.forEach((spawnRequest) => {
-            console.log(JSON.stringify(spawnRequest, undefined, 4));
-            console.log(text +
-                ": " +
-                JSON.stringify(spawnRequest.name + " - " + spawnRequest.priority, undefined, 4));
-        });
-        // console.log(JSON.stringify(this.spawnQueue[0], undefined, 4));
-    }
-    // Spawn visuals
-    spawnVisuals() {
-        for (const spawn of this.spawns) {
-            if (spawn.spawning) {
-                const spawningCreep = Game.creeps[spawn.spawning.name];
-                spawn.room.visual.text("🛠️" + spawningCreep.memory.role, spawn.pos.x + 1, spawn.pos.y, {
-                    align: "left",
-                    opacity: 0.8,
-                });
+}
+function spawnCreeps(spawnerInstance) {
+    const spawnRequest = spawnerInstance.spawnQueue[0];
+    assignSpawn(spawnerInstance, spawnRequest);
+    if (spawnRequest.assignedSpawn) {
+        let targetSpawn = HelperFunctions.findObjectWithID(spawnRequest.assignedSpawn);
+        if (targetSpawn) {
+            if (targetSpawn.spawnCreep(spawnRequest.body, spawnRequest.name, {
+                memory: spawnRequest.memory,
+            })) {
+                spawnQueueRemove(spawnerInstance, spawnRequest);
             }
         }
     }
-    spawnCreeps() {
-        const spawnRequest = this.spawnQueue[0];
-        this.assignSpawn(spawnRequest);
-        if (spawnRequest.assignedSpawn) {
-            let targetSpawn = HelperFunctions.findObjectWithID(spawnRequest.assignedSpawn);
-            if (targetSpawn) {
-                if (targetSpawn.spawnCreep(spawnRequest.body, spawnRequest.name, {
-                    memory: spawnRequest.memory,
-                })) {
-                    this.spawnQueueRemove(spawnRequest);
-                }
-            }
+}
+// sort queue by priority (ascending)
+function spawnQueueSort(spawnerInstance) {
+    spawnerInstance.spawnQueue.sort((a, b) => {
+        return a.priority - b.priority;
+    });
+}
+function assignSpawn(spawnerInstance, order) {
+    for (const spawn in spawnerInstance.spawns) {
+        if (!spawnerInstance.spawns[spawn].spawning) {
+            order.assignedSpawn = spawnerInstance.spawns[spawn].id;
         }
     }
-    // sort queue by priority (ascending)
-    spawnQueueSort() {
-        this.spawnQueue.sort((a, b) => {
-            return a.priority - b.priority;
-        });
-    }
-    assignSpawn(order) {
-        for (const spawn in this.spawns) {
-            if (!this.spawns[spawn].spawning) {
-                order.assignedSpawn = this.spawns[spawn].id;
-            }
-        }
-    }
-    spawnQueueAdd(spawnRequest) {
-        this.spawnQueue.push(spawnRequest);
-        this.assignSpawn(spawnRequest);
-    }
-    spawnQueueRemove(spawnRequest) {
-        const index = this.spawnQueue.indexOf(spawnRequest);
-        if (index > -1) {
-            this.spawnQueue.splice(index, 1);
-        }
-    }
-    spawnQueueClear() {
-        this.spawnQueue = [];
-    }
-    spawnQueueSize() {
-        return this.spawnQueue.length;
-    }
-    spawnQueueContains(spawnRequest) {
-        return this.spawnQueue.indexOf(spawnRequest) > -1;
-    }
-    spawnQueueContainsName(name) {
-        for (const spawn in this.spawnQueue) {
-            if (this.spawnQueue[spawn].name === name) {
-                return true;
-            }
-        }
-        return false;
+}
+function spawnQueueAdd(spawnerInstance, spawnRequest) {
+    spawnerInstance.spawnQueue.push(spawnRequest);
+    assignSpawn(spawnerInstance, spawnRequest);
+}
+function spawnQueueRemove(spawnerInstance, spawnRequest) {
+    const index = spawnerInstance.spawnQueue.indexOf(spawnRequest);
+    if (index > -1) {
+        spawnerInstance.spawnQueue.splice(index, 1);
     }
 }
 
@@ -4266,20 +4240,18 @@ class StructuresInstance {
     }
 }
 
-// Pure function to create room data
-function createRoomData(room) {
+function createRoomInstance(room) {
     return {
         room,
         roomController: room.controller,
-        roomSpawner: new SpawnerInstance(room),
+        roomSpawner: createSpawnerInstance(room),
         roomSources: room.sources.filter((source) => !HelperFunctions.isHostileNearby(source)),
         roomStructuresInstance: new StructuresInstance(room, room.sources.filter((source) => !HelperFunctions.isHostileNearby(source))),
         roomCreeps: new CreepsInstance(room)
     };
 }
-// Pure function to run safe mode logic
-function runSafeMode(roomData) {
-    const { roomController } = roomData;
+function runSafeMode(roomInstance) {
+    const { roomController } = roomInstance;
     if (roomController &&
         roomController.level > 1 &&
         (!roomController.safeMode || roomController.safeMode < 1000) &&
@@ -4287,56 +4259,46 @@ function runSafeMode(roomData) {
         roomController.activateSafeMode();
     }
 }
-// Pure function to find available sources
-function findAvailableSources(roomData, creeps) {
-    return roomData.roomSources.filter((source) => creeps.filter((creep) => creep.memory.assigned_source === source.id).length === 0);
+function findAvailableSources(roomInstance, creeps) {
+    return roomInstance.roomSources.filter((source) => creeps.filter((creep) => creep.memory.assigned_source === source.id).length === 0);
 }
-// Pure function to spawn harvesters
-function spawnHarvesters(roomData) {
-    const { roomController, roomCreeps, roomSpawner, roomSources } = roomData;
+function spawnHarvesters(roomInstance) {
+    const { roomController, roomCreeps, roomSpawner, roomSources } = roomInstance;
     if (roomController && roomCreeps.harvesters.length < roomSources.length) {
-        let targetSource = findAvailableSources(roomData, roomCreeps.harvesters)[0];
-        roomSpawner.spawnQueueAdd(roomCreeps.newCreep("harvester", roomCreeps.MyCreepBodies.harvesters, roomCreeps.harvesters.length < 2 ? 10 : 21, targetSource));
+        let targetSource = findAvailableSources(roomInstance, roomCreeps.harvesters)[0];
+        spawnQueueAdd(roomSpawner, roomCreeps.newCreep("harvester", roomCreeps.MyCreepBodies.harvesters, roomCreeps.harvesters.length < 2 ? 10 : 21, targetSource));
     }
 }
-// Pure function to spawn haulers
-function spawnHaulers(roomData) {
-    const { roomController, roomCreeps, roomSpawner } = roomData;
+function spawnHaulers(roomInstance) {
+    const { roomController, roomCreeps, roomSpawner } = roomInstance;
     if (roomController && roomCreeps.haulers.length < roomCreeps.harvesters.length) {
-        let targetSource = findAvailableSources(roomData, roomCreeps.haulers)[0];
-        roomSpawner.spawnQueueAdd(roomCreeps.newCreep("hauler", roomCreeps.MyCreepBodies.haulers, roomCreeps.harvesters.length < 2 ? 9 : 10, targetSource));
+        let targetSource = findAvailableSources(roomInstance, roomCreeps.haulers)[0];
+        spawnQueueAdd(roomSpawner, roomCreeps.newCreep("hauler", roomCreeps.MyCreepBodies.haulers, roomCreeps.harvesters.length < 2 ? 9 : 10, targetSource));
     }
 }
-// Pure function to spawn upgraders
-function spawnUpgraders(roomData) {
-    const { roomController, roomCreeps, roomSpawner } = roomData;
+function spawnUpgraders(roomInstance) {
+    const { roomController, roomCreeps, roomSpawner } = roomInstance;
     if (roomController && roomCreeps.upgraders.length < 3) {
-        roomSpawner.spawnQueueAdd(roomCreeps.newCreep("upgrader", roomCreeps.MyCreepBodies.upgraders, 20));
+        spawnQueueAdd(roomSpawner, roomCreeps.newCreep("upgrader", roomCreeps.MyCreepBodies.upgraders, 20));
     }
 }
-// Pure function to spawn builders
-function spawnBuilders(roomData) {
-    const { roomController, roomCreeps, roomSpawner } = roomData;
+function spawnBuilders(roomInstance) {
+    const { roomController, roomCreeps, roomSpawner } = roomInstance;
     if (roomController && roomCreeps.builders.length < 1 && roomController.level > 1) {
-        roomSpawner.spawnQueueAdd(roomCreeps.newCreep("builder", roomCreeps.MyCreepBodies.builders, roomCreeps.builders.length < 1 ? 10 : 21));
+        spawnQueueAdd(roomSpawner, roomCreeps.newCreep("builder", roomCreeps.MyCreepBodies.builders, roomCreeps.builders.length < 1 ? 10 : 21));
     }
 }
-// Pure function to run all spawn logic
-function runSpawnLogic(roomData) {
-    spawnHarvesters(roomData);
-    spawnHaulers(roomData);
-    spawnUpgraders(roomData);
-    spawnBuilders(roomData);
+function runSpawnLogic(roomInstance) {
+    spawnHarvesters(roomInstance);
+    spawnHaulers(roomInstance);
+    spawnUpgraders(roomInstance);
+    spawnBuilders(roomInstance);
 }
-// Pure function to run all room logic
-function runRoom(roomData) {
-    // activate safe mode if needed
-    runSafeMode(roomData);
-    // Run spawn logic
-    runSpawnLogic(roomData);
-    // Run creeps and spawner
-    roomData.roomCreeps.run();
-    roomData.roomSpawner.run();
+function runRoom(roomInstance) {
+    runSafeMode(roomInstance);
+    runSpawnLogic(roomInstance);
+    roomInstance.roomCreeps.run();
+    runSpawner(roomInstance.roomSpawner);
 }
 
 // Usage:
@@ -4526,16 +4488,11 @@ function unwrappedLoop() {
     }
     // Run room logic
     for (const room in Game.rooms) {
-        // Functional approach (alternative to class-based approach)
-        const roomData = createRoomData(Game.rooms[room]);
-        if (roomData.roomController) {
-            runRoom(roomData);
+        // Functional approach
+        const roomInstance = createRoomInstance(Game.rooms[room]);
+        if (roomInstance.roomController) {
+            runRoom(roomInstance);
         }
-        // Class-based approach (legacy, still works)
-        // const roomInstance = new RoomInstance(Game.rooms[room]);
-        // if (roomInstance.roomController) {
-        //   roomInstance.run();
-        // }
     }
 }
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
