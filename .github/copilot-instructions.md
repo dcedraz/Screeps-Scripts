@@ -7,6 +7,7 @@
   - `src/`: Main source code. Key files: `main.ts`, `RoomInstance.ts`, `CreepsInstance.ts`, `StructuresInstance.ts`, `SpawnerInstance.ts`, `utils/`, and especially `utils/roomAdditions.ts` (performance-critical caching of game objects).
   - `creep roles/`: Specialized logic for each creep role (e.g., `RoleBuilder.ts`, `RoleHarvester.ts`).
   - `test/src/`: All new test files must be placed here and written with Jest.
+  - `prompt history/`: Stores conversation history with AI coding agent. This is used to serve as context for future conversations.
 
 ## Build, Deploy, and Test Workflows
 
@@ -22,8 +23,8 @@
 
 - **TDD & Tidy First:** Strictly follow Red-Green-Refactor and separate structural from behavioral changes. See below for workflow.
 - **Globals:** All Screeps globals must be mocked before importing any user code in tests.
-- **Room/Creep/Structure Logic:** Each major game concept is currently encapsulated in its own class (see `RoomInstance`, `CreepsInstance`, `StructuresInstance`).
-- **Role Pattern:** Creep roles are implemented as classes in `creep roles/`, each with a `run()` method.
+- **Room/Creep/Structure Logic:** Each major game concept is currently encapsulated in its own factory function (see `RoomInstance`, `CreepsInstance`, `StructuresInstance`).
+- **Role Pattern:** Creep roles are implemented as factory functions in `creep roles/`, each with a `run()` method.
 - **Helper Functions:** Shared logic is in `utils/HelperFunctions.ts` and `utils/roomAdditions.ts` (the latter is key for performance).
 - **Module Bundling:** Rollup is used; see `rollup.config.js` and `docs/in-depth/module-bundling.md` for details.
 
@@ -46,14 +47,14 @@
 - `src/main.ts`: Entry point; main game loop.
 - `src/RoomInstance.ts`, `src/CreepsInstance.ts`, `src/StructuresInstance.ts`: Core game logic.
 - `src/utils/roomAdditions.ts`: Performance-critical caching and extension of Room objects.
-- `src/creep roles/`: Creep role classes.
+- `src/creep roles/`: Creep role factory functions.
 - `test/src/`: All new test files (Jest only).
 - `rollup.config.js`, `screeps.json`: Build and deploy configuration.
 - `README.md`: The only project-specific documentation; see Issues and TODOs for planned changes.
 
 ## Planned Changes
 
-- **Migration to Functional Programming:** Classes representing game objects and concepts are planned to be refactored to a more functional approach.
+- **Migration to Functional Programming:** Classes representing game objects and concepts are planned to be refactored to a more functional approach. Only the StructureInstance class is left to be migrated, all the rest is completed already.
 - **CostMatrix Refactor:** Improve performance and support for more structure types.
 - **Other Planned Changes:** See `README.md` Issues and TODOs section for additional refactoring, logic improvements, and feature plans (e.g., multiroom logic, builder calculation, visual status, etc.).
 

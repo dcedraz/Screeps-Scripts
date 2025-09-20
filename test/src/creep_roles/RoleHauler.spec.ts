@@ -1,5 +1,11 @@
 import { mockInstanceOf, mockGlobal } from 'screeps-jest';
-import { RoleHauler } from '../../../src/creep_roles/RoleHauler';
+
+mockGlobal<Game>('Game', {
+  time: 12345,
+  getObjectById: jest.fn(),
+});
+
+import { runHaulerRole } from '../../../src/creep_roles/RoleHauler';
 
 jest.mock('../../../src/utils/HelperFunctions', () => ({
   HelperFunctions: {
@@ -15,100 +21,142 @@ jest.mock('../../../src/utils/HelperFunctions', () => ({
 
 const HelperFunctions = require('../../../src/utils/HelperFunctions').HelperFunctions;
 
-describe('RoleHauler', () => {
-  it('gives energy to nearby builder or upgrader creeps when full', () => {
-    const targetCreep = { memory: { role: 'builder' } } as Creep;
-    const creep = mockInstanceOf<Creep>({
-      pos: { findInRange: jest.fn(() => [targetCreep]) },
-      transfer: jest.fn(),
-      memory: {},
-      store: { getUsedCapacity: () => 10 },
-      room: {},
+// Functional approach tests
+describe('runHaulerRole (Functional)', () => {
+  it('should collect energy from containers when empty', () => {
+    const container = mockInstanceOf<StructureContainer>({
+      structureType: STRUCTURE_CONTAINER,
+      store: { getUsedCapacity: jest.fn(() => 500) }
     });
-    const hauler = new RoleHauler(creep);
-    hauler.run();
-    expect(creep.pos.findInRange).toHaveBeenCalledWith(FIND_MY_CREEPS, 1, expect.anything());
-    expect(creep.transfer).toHaveBeenCalledWith(targetCreep, RESOURCE_ENERGY);
-  });
+    
+    const source = mockInstanceOf<Source>({
+      id: 'source1' as Id<Source>,
+      pos: {
+        findInRange: jest.fn((type) => {
+          if (type === FIND_DROPPED_RESOURCES) return [];
+          if (type === FIND_STRUCTURES) return [container];
+          return [];
+        })
+      }
+    });
+    
+    const creep = mockInstanceOf<Creep>({
+      memory: { 
+        role: 'hauler', 
+        working: false,
+        assigned_source: source.id
+      },
+      store: { 
+        getUsedCapacity: jest.fn(() => 0),
+        getFreeCapacity: jest.fn(() => 50)
+      },
+      pos: { 
+        isNearTo: jest.fn(() => false),
+        findInRange: jest.fn(() => [])
+      },
+      moveTo: jest.fn(() => OK),
+      withdraw: jest.fn(() => OK)
+    });
 
-  it('picks up greatest dropped energy if empty and found', () => {
-    const dropped = { pos: { isNearTo: jest.fn(() => false) } };
-    HelperFunctions.getGreatestEnergyDrop.mockReturnValue(dropped);
-    const creep = mockInstanceOf<Creep>({
-      room: {},
-      pos: { isNearTo: jest.fn(() => false), moveTo: jest.fn() },
-      moveTo: jest.fn(),
-      pickup: jest.fn(),
-      store: { getUsedCapacity: () => 0 },
-      memory: { assigned_source: undefined },
-    });
-    const hauler = new RoleHauler(creep);
-    hauler.run();
-    expect(HelperFunctions.getGreatestEnergyDrop).toHaveBeenCalledWith(creep.room);
-    expect(creep.moveTo).toHaveBeenCalledWith(dropped, expect.anything());
-    expect(creep.pickup).toHaveBeenCalledWith(dropped);
-  });
+    (Game.getObjectById as jest.Mock).mockReturnValue(source);
+    HelperFunctions.isContainer.mockReturnValue(true);
+    HelperFunctions.getGreatestEnergyDrop.mockReturnValue(undefined);
 
-  it('gets energy from dropped energy at assigned source if present', () => {
-    const dropped = { pos: { isNearTo: jest.fn(() => false) } };
-    const source = { pos: { findInRange: jest.fn((type) => type === FIND_DROPPED_RESOURCES ? [dropped] : []) } };
-    const creep = mockInstanceOf<Creep>({
-      memory: { assigned_source: 'source1' },
-      pos: { isNearTo: jest.fn(() => false), moveTo: jest.fn() },
-      moveTo: jest.fn(),
-      pickup: jest.fn(),
-      room: {},
-      store: { getUsedCapacity: () => 0 },
-    });
-    mockGlobal<Game>('Game', { getObjectById: jest.fn(() => source) });
-    const hauler = new RoleHauler(creep);
-    hauler.run();
-    expect(Game.getObjectById).toHaveBeenCalledWith('source1');
-    expect(source.pos.findInRange).toHaveBeenCalledWith(FIND_DROPPED_RESOURCES, 1);
-    expect(creep.moveTo).toHaveBeenCalledWith(dropped, expect.anything());
-    expect(creep.pickup).toHaveBeenCalledWith(dropped);
-  });
+    runHaulerRole(creep);
 
-  it('gets energy from source container if no dropped energy at source', () => {
-    const container = { pos: { isNearTo: jest.fn(() => false) }, store: { getUsedCapacity: () => 50 } };
-    const source = { pos: { findInRange: jest.fn((type) => type === FIND_STRUCTURES ? [container] : []) } };
-    const creep = mockInstanceOf<Creep>({
-      memory: { assigned_source: 'source1' },
-      pos: { isNearTo: jest.fn(() => false), moveTo: jest.fn() },
-      moveTo: jest.fn(),
-      withdraw: jest.fn(),
-      room: {},
-      store: { getUsedCapacity: () => 0 },
-    });
-    mockGlobal<Game>('Game', { getObjectById: jest.fn(() => source) });
-    const hauler = new RoleHauler(creep);
-    hauler.run();
-    expect(Game.getObjectById).toHaveBeenCalledWith('source1');
-    expect(source.pos.findInRange).toHaveBeenCalledWith(FIND_DROPPED_RESOURCES, 1);
-    expect(source.pos.findInRange).toHaveBeenCalledWith(FIND_STRUCTURES, 1, expect.anything());
     expect(creep.moveTo).toHaveBeenCalledWith(container, expect.anything());
     expect(creep.withdraw).toHaveBeenCalledWith(container, RESOURCE_ENERGY);
   });
 
-  it('stores energy in sorted storage targets when full and no nearby creeps', () => {
-    const target = { pos: { isNearTo: jest.fn(() => false) }, store: { getFreeCapacity: () => 100 } };
-    HelperFunctions.getRoomStructuresArray.mockReturnValue([target]);
-    HelperFunctions.isSpawn.mockReturnValue(true);
-    const creep = mockInstanceOf<Creep>({
-      pos: { 
-        isNearTo: jest.fn(() => false), 
-        moveTo: jest.fn(),
-        findInRange: jest.fn((type: any) => type === FIND_MY_CREEPS ? [] : [target])
-      },
-      moveTo: jest.fn(),
-      transfer: jest.fn(),
-      store: { getUsedCapacity: () => 10 },
-      room: {},
-      memory: {},
+  it('should deliver energy to spawn when full', () => {
+    const spawn = mockInstanceOf<StructureSpawn>({
+      structureType: STRUCTURE_SPAWN,
+      store: { getFreeCapacity: jest.fn(() => 100) }
     });
-    const hauler = new RoleHauler(creep);
-    hauler.run();
-    expect(creep.moveTo).toHaveBeenCalledWith(target, expect.anything());
-    expect(creep.transfer).toHaveBeenCalledWith(target, RESOURCE_ENERGY);
+    
+    const creep = mockInstanceOf<Creep>({
+      memory: { role: 'hauler', working: true },
+      store: { getUsedCapacity: jest.fn(() => 50) },
+      transfer: jest.fn(() => OK),
+      moveTo: jest.fn(() => OK),
+      pos: { 
+        isNearTo: jest.fn(() => false),
+        findInRange: jest.fn(() => [])
+      },
+      room: {}
+    });
+
+    HelperFunctions.getRoomStructuresArray.mockReturnValue([spawn]);
+    HelperFunctions.isSpawn.mockReturnValue(true);
+    HelperFunctions.isExtension.mockReturnValue(false);
+    HelperFunctions.isTower.mockReturnValue(false);
+    HelperFunctions.isStorage.mockReturnValue(false);
+
+    runHaulerRole(creep);
+
+    expect(creep.transfer).toHaveBeenCalledWith(spawn, RESOURCE_ENERGY);
+  });
+
+  it('should give energy to nearby builder or upgrader creeps', () => {
+    const builderCreep = mockInstanceOf<Creep>({
+      memory: { role: 'builder' }
+    });
+    
+    const creep = mockInstanceOf<Creep>({
+      memory: { role: 'hauler', working: true },
+      store: { getUsedCapacity: jest.fn(() => 50) },
+      pos: {
+        findInRange: jest.fn(() => [builderCreep])
+      },
+      transfer: jest.fn(() => OK),
+      moveTo: jest.fn(() => OK),
+      room: {}
+    });
+
+    HelperFunctions.getRoomStructuresArray.mockReturnValue([]);
+
+    runHaulerRole(creep);
+
+    expect(creep.transfer).toHaveBeenCalledWith(builderCreep, RESOURCE_ENERGY);
+  });
+
+  it('should pick up dropped energy when no containers available', () => {
+    const droppedEnergy = mockInstanceOf<Resource>({
+      resourceType: RESOURCE_ENERGY,
+      amount: 100
+    });
+    
+    const source = mockInstanceOf<Source>({
+      id: 'source1' as Id<Source>,
+      pos: {
+        findInRange: jest.fn((type) => {
+          if (type === FIND_DROPPED_RESOURCES) return [droppedEnergy];
+          if (type === FIND_STRUCTURES) return [];
+          return [];
+        })
+      }
+    });
+    
+    const creep = mockInstanceOf<Creep>({
+      memory: { 
+        role: 'hauler', 
+        working: false,
+        assigned_source: source.id
+      },
+      store: { getUsedCapacity: jest.fn(() => 0) },
+      pos: { 
+        isNearTo: jest.fn(() => false),
+        findInRange: jest.fn(() => [])
+      },
+      moveTo: jest.fn(() => OK),
+      pickup: jest.fn(() => OK)
+    });
+
+    (Game.getObjectById as jest.Mock).mockReturnValue(source);
+    HelperFunctions.getGreatestEnergyDrop.mockReturnValue(undefined);
+
+    runHaulerRole(creep);
+
+    expect(creep.pickup).toHaveBeenCalledWith(droppedEnergy);
   });
 });

@@ -1,7 +1,7 @@
 import { mockInstanceOf } from 'screeps-jest';
 import { createRoomInstance, runSafeMode, findAvailableSources, spawnHarvesters, spawnHaulers, spawnUpgraders, spawnBuilders, runSpawnLogic, runRoom } from '../../src/RoomInstance';
 import { SpawnerInstance, createSpawnerInstance, spawnQueueAdd, runSpawner } from "SpawnerInstance";
-import { CreepsInstance } from "CreepsInstance";
+import { CreepsInstance, createCreepsInstance, createSpawnWorkOrder, runCreeps } from "CreepsInstance";
 import { StructuresInstance } from "StructuresInstance";
 
 jest.mock("SpawnerInstance");
@@ -20,25 +20,20 @@ function createRoomInstanceForTesting({
     spawns: [],
     spawnQueue: [],
   } as SpawnerInstance,
-  creeps = mockInstanceOf<CreepsInstance>({
+  creepsInstance = {
+    room: mockInstanceOf<Room>({}),
+    creeps: [] as Creep[],
     harvesters: [] as Creep[],
     haulers: [] as Creep[],
     upgraders: [] as Creep[],
     builders: [] as Creep[],
-    MyCreepBodies: {
-      harvesters: ['work', 'move'],
-      haulers: ['carry', 'move'],
-      upgraders: ['work', 'carry', 'move'],
-      builders: ['work', 'carry', 'move'],
+    creepBodies: {
+      harvesters: ['work', 'move'] as BodyPartConstant[],
+      haulers: ['carry', 'move'] as BodyPartConstant[],
+      upgraders: ['work', 'carry', 'move'] as BodyPartConstant[],
+      builders: ['work', 'carry', 'move'] as BodyPartConstant[],
     },
-    newCreep: jest.fn((role, body, priority, source) => ({
-      name: `Initial_${role}-12345`,
-      body: body,
-      memory: { role: role, working: false, room: 'W1N1', assigned_source: source?.id },
-      priority: priority,
-    })),
-    run: jest.fn(),
-  }),
+  } as CreepsInstance,
   sources = [
     mockInstanceOf<Source>({ 
       id: 'source1',
@@ -50,19 +45,37 @@ function createRoomInstanceForTesting({
     })
   ],
   structures = mockInstanceOf<StructuresInstance>({}),
+}: {
+  controller?: StructureController;
+  spawner?: SpawnerInstance;
+  creepsInstance?: CreepsInstance;
+  structures?: StructuresInstance;
+  sources?: Source[];
 } = {}) {
   // Mock the constructor calls
   (createSpawnerInstance as jest.MockedFunction<typeof createSpawnerInstance>).mockReturnValue(spawner);
   (spawnQueueAdd as jest.MockedFunction<typeof spawnQueueAdd>).mockImplementation(() => {});
   (runSpawner as jest.MockedFunction<typeof runSpawner>).mockImplementation(() => {});
-  (CreepsInstance as jest.MockedClass<typeof CreepsInstance>).mockImplementation(() => creeps);
+  (createCreepsInstance as jest.MockedFunction<typeof createCreepsInstance>).mockReturnValue(creepsInstance);
+  (createSpawnWorkOrder as jest.MockedFunction<typeof createSpawnWorkOrder>).mockImplementation((role, body, priority, roomName, source) => ({
+    name: `Initial_${role}`,
+    body: body,
+    memory: { role: role, working: false, room: roomName, assigned_source: source?.id },
+    priority: priority,
+  }));
+  (runCreeps as jest.MockedFunction<typeof runCreeps>).mockImplementation(() => {});
   (StructuresInstance as jest.MockedClass<typeof StructuresInstance>).mockImplementation(() => structures);
 
-  const room = mockInstanceOf<Room>({ controller, sources, find: jest.fn(() => []) });
+  const room = mockInstanceOf<Room>({ 
+    controller, 
+    sources, 
+    find: jest.fn(() => []),
+    name: 'TestRoom'
+  });
   return {
     room,
     spawner,
-    creeps,
+    creeps: creepsInstance,
     structures,
     sources
   };
@@ -155,7 +168,7 @@ describe('RoomInstance', () => {
 
       expect(spawnQueueAdd).toHaveBeenCalledWith(spawner, expect.objectContaining({
         name: expect.stringContaining('Initial_harvester'),
-        body: creeps.MyCreepBodies.harvesters,
+        body: creeps.creepBodies.harvesters,
         memory: expect.objectContaining({ role: 'harvester' })
       }));
     });
@@ -185,7 +198,7 @@ describe('RoomInstance', () => {
 
       expect(spawnQueueAdd).toHaveBeenCalledWith(spawner, expect.objectContaining({
         name: expect.stringContaining('Initial_hauler'),
-        body: creeps.MyCreepBodies.haulers,
+        body: creeps.creepBodies.haulers,
         memory: expect.objectContaining({ role: 'hauler' })
       }));
     });
@@ -200,7 +213,7 @@ describe('RoomInstance', () => {
 
       expect(spawnQueueAdd).toHaveBeenCalledWith(spawner, expect.objectContaining({
         name: expect.stringContaining('Initial_upgrader'),
-        body: creeps.MyCreepBodies.upgraders,
+        body: creeps.creepBodies.upgraders,
         memory: expect.objectContaining({ role: 'upgrader' })
       }));
     });
@@ -215,7 +228,7 @@ describe('RoomInstance', () => {
 
       expect(spawnQueueAdd).toHaveBeenCalledWith(spawner, expect.objectContaining({
         name: expect.stringContaining('Initial_builder'),
-        body: creeps.MyCreepBodies.builders,
+        body: creeps.creepBodies.builders,
         memory: expect.objectContaining({ role: 'builder' })
       }));
     });
@@ -233,22 +246,22 @@ describe('RoomInstance', () => {
 
       expect(spawnQueueAdd).toHaveBeenCalledWith(spawner, expect.objectContaining({
         name: expect.stringContaining('Initial_harvester'),
-        body: creeps.MyCreepBodies.harvesters,
+        body: creeps.creepBodies.harvesters,
         memory: expect.objectContaining({ role: 'harvester' })
       }));
       expect(spawnQueueAdd).toHaveBeenCalledWith(spawner, expect.objectContaining({
         name: expect.stringContaining('Initial_hauler'),
-        body: creeps.MyCreepBodies.haulers,
+        body: creeps.creepBodies.haulers,
         memory: expect.objectContaining({ role: 'hauler' })
       }));
       expect(spawnQueueAdd).toHaveBeenCalledWith(spawner, expect.objectContaining({
         name: expect.stringContaining('Initial_upgrader'),
-        body: creeps.MyCreepBodies.upgraders,
+        body: creeps.creepBodies.upgraders,
         memory: expect.objectContaining({ role: 'upgrader' })
       }));
       expect(spawnQueueAdd).toHaveBeenCalledWith(spawner, expect.objectContaining({
         name: expect.stringContaining('Initial_builder'),
-        body: creeps.MyCreepBodies.builders,
+        body: creeps.creepBodies.builders,
         memory: expect.objectContaining({ role: 'builder' })
       }));
     });
@@ -261,7 +274,7 @@ describe('RoomInstance', () => {
 
       runRoom(roomInstance);
 
-      expect(creeps.run).toHaveBeenCalled();
+      expect(runCreeps).toHaveBeenCalledWith(creeps);
       expect(runSpawner).toHaveBeenCalledWith(spawner);
     });
   });

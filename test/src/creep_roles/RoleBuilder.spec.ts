@@ -1,5 +1,12 @@
-import { mockInstanceOf } from 'screeps-jest';
-import { RoleBuilder } from '../../../src/creep_roles/RoleBuilder';
+import { mockInstanceOf, mockGlobal } from 'screeps-jest';
+
+// Mock Screeps globals before importing user code
+mockGlobal<Game>('Game', {
+  time: 12345,
+  getObjectById: jest.fn(),
+});
+
+import { runBuilderRole } from '../../../src/creep_roles/RoleBuilder';
 
 jest.mock('../../../src/utils/HelperFunctions', () => ({
   HelperFunctions: {
@@ -14,89 +21,204 @@ jest.mock('../../../src/utils/HelperFunctions', () => ({
 
 const HelperFunctions = require('../../../src/utils/HelperFunctions').HelperFunctions;
 
-describe('RoleBuilder', () => {
-  it('switches to collecting when out of energy', () => {
+// Functional approach tests
+describe('runBuilderRole (Functional)', () => {
+  it('should build construction sites when has energy', () => {
+    const constructionSite = mockInstanceOf<ConstructionSite>({});
+    
     const creep = mockInstanceOf<Creep>({
-      memory: { working: true },
-      store: { [RESOURCE_ENERGY]: 0, getFreeCapacity: jest.fn(() => 50) },
-      say: jest.fn(),
-      room: { name: 'W1N1', cSites: [], controller: undefined },
-    });
-    const builder = new RoleBuilder(creep, []);
-    builder.run();
-    expect(creep.memory.working).toBe(false);
-    expect(creep.say).toHaveBeenCalledWith('🔄 collect');
-  });
-
-  it('switches to building when full', () => {
-    const creep = mockInstanceOf<Creep>({
-      memory: { working: false },
-      store: { [RESOURCE_ENERGY]: 50, getFreeCapacity: jest.fn(() => 0)},
-      say: jest.fn(),
-      room: { name: 'W1N1', cSites: [], controller: undefined },
-    });
-    const builder = new RoleBuilder(creep, []);
-    builder.run();
-    expect(creep.memory.working).toBe(true);
-    expect(creep.say).toHaveBeenCalledWith('⚡ build');
-  });
-
-  it('calls getEnergy when not working', () => {
-    const creep = mockInstanceOf<Creep>({
-      memory: { working: false },
-      store: { [RESOURCE_ENERGY]: 0, getFreeCapacity: jest.fn(() => 50) },
-      room: { name: 'W1N1', cSites: [], controller: undefined },
-    });
-    const builder = new RoleBuilder(creep, []);
-    const getEnergySpy = jest.spyOn(builder, 'getEnergy');
-    builder.run();
-    expect(getEnergySpy).toHaveBeenCalled();
-  });
-
-  it('builds and moves to construction site when working and out of range', () => {
-    const site = mockInstanceOf<ConstructionSite>({ id: 'site1' });
-    const creep = mockInstanceOf<Creep>({
-      memory: { working: true },
-      store: { [RESOURCE_ENERGY]: 50, getFreeCapacity: jest.fn(() => 0)},
-      room: { name: 'W1N1', cSites: [], controller: undefined },
-      moveTo: jest.fn(),
+      memory: { role: 'builder', working: true },
+      store: { 
+        [RESOURCE_ENERGY]: 50,
+        getUsedCapacity: jest.fn(() => 50),
+        getFreeCapacity: jest.fn(() => 0) 
+      },
       build: jest.fn(() => ERR_NOT_IN_RANGE),
+      moveTo: jest.fn(() => OK),
+      say: jest.fn(),
+      room: {
+        cSites: [constructionSite]
+      }
     });
-    const builder = new RoleBuilder(creep, [site]);
-    builder.run();
-    expect(creep.build).toHaveBeenCalledWith(site);
-    expect(creep.moveTo).toHaveBeenCalledWith(site, expect.anything());
-  });
 
-  it('repairs and moves to repair site when working and no construction sites but has repair sites', () => {
-    const repairSite = { hits: 10, hitsMax: 100 } as Structure;
-    HelperFunctions.getRoomStructuresArray.mockReturnValue([repairSite]);
-    const creep = mockInstanceOf<Creep>({
-      memory: { working: true },
-      store: { [RESOURCE_ENERGY]: 50, getFreeCapacity: jest.fn(() => 0)},
-      room: { name: 'W1N1', cSites: [], controller: undefined },
-      moveTo: jest.fn(),
-      repair: jest.fn(() => ERR_NOT_IN_RANGE),
-    });
-    const builder = new RoleBuilder(creep, []);
-    builder.run();
-    expect(creep.repair).toHaveBeenCalledWith(repairSite);
-    expect(creep.moveTo).toHaveBeenCalledWith(repairSite, expect.anything());
-  });
-
-  it('upgrades controller and moves to it when nothing to build or repair', () => {
-    const controller = mockInstanceOf<StructureController>({});
     HelperFunctions.getRoomStructuresArray.mockReturnValue([]);
-    const creep = mockInstanceOf<Creep>({
-      memory: { working: true },
-      store: { [RESOURCE_ENERGY]: 50, getFreeCapacity: jest.fn(() => 0) },
-      room: { name: 'W1N1', cSites: [], controller },
-      moveTo: jest.fn(),
-      upgradeController: jest.fn(() => ERR_NOT_IN_RANGE),
+
+    runBuilderRole(creep);
+
+    expect(creep.build).toHaveBeenCalledWith(constructionSite);
+    expect(creep.moveTo).toHaveBeenCalledWith(constructionSite, expect.anything());
+  });
+
+  it('should collect energy from storage when empty', () => {
+    const storage = mockInstanceOf<StructureStorage>({
+      structureType: STRUCTURE_STORAGE,
+      store: { [RESOURCE_ENERGY]: 500 },
+      hits: 1000,
+      hitsMax: 1000
     });
-    const builder = new RoleBuilder(creep, []);
-    builder.run();
+    
+    const creep = mockInstanceOf<Creep>({
+      memory: { role: 'builder', working: false },
+      store: { 
+        [RESOURCE_ENERGY]: 0,
+        getUsedCapacity: jest.fn(() => 0),
+        getFreeCapacity: jest.fn(() => 50) 
+      },
+      withdraw: jest.fn(() => ERR_NOT_IN_RANGE),
+      moveTo: jest.fn(() => OK),
+      say: jest.fn(),
+      room: {
+        cSites: []
+      }
+    });
+
+    HelperFunctions.getRoomStructuresArray.mockReturnValue([storage]);
+    HelperFunctions.isStorage.mockReturnValue(true);
+    HelperFunctions.isContainer.mockReturnValue(false);
+    HelperFunctions.isExtension.mockReturnValue(false);
+    HelperFunctions.isSpawn.mockReturnValue(false);
+    HelperFunctions.getGreatestEnergyDrop.mockReturnValue(undefined);
+
+    runBuilderRole(creep);
+
+    expect(creep.withdraw).toHaveBeenCalledWith(storage, RESOURCE_ENERGY);
+    expect(creep.moveTo).toHaveBeenCalledWith(storage, expect.anything());
+  });
+
+  it('should repair damaged structures when no construction sites', () => {
+    const damagedStructure = mockInstanceOf<StructureRoad>({
+      hits: 500,
+      hitsMax: 1000,
+      structureType: STRUCTURE_ROAD
+    });
+    
+    const creep = mockInstanceOf<Creep>({
+      memory: { role: 'builder', working: true },
+      store: { 
+        [RESOURCE_ENERGY]: 50,
+        getUsedCapacity: jest.fn(() => 50),
+        getFreeCapacity: jest.fn(() => 0) 
+      },
+      repair: jest.fn(() => ERR_NOT_IN_RANGE),
+      moveTo: jest.fn(() => OK),
+      say: jest.fn(),
+      room: {
+        cSites: []
+      }
+    });
+
+    HelperFunctions.getRoomStructuresArray.mockReturnValue([damagedStructure]);
+
+    runBuilderRole(creep);
+
+    expect(creep.repair).toHaveBeenCalledWith(damagedStructure);
+    expect(creep.moveTo).toHaveBeenCalledWith(damagedStructure, expect.anything());
+  });
+
+  it('should upgrade controller when no construction sites and no repairs needed', () => {
+    const controller = mockInstanceOf<StructureController>({});
+    
+    const creep = mockInstanceOf<Creep>({
+      memory: { role: 'builder', working: true },
+      store: { 
+        [RESOURCE_ENERGY]: 50,
+        getUsedCapacity: jest.fn(() => 50),
+        getFreeCapacity: jest.fn(() => 0) 
+      },
+      upgradeController: jest.fn(() => ERR_NOT_IN_RANGE),
+      moveTo: jest.fn(() => OK),
+      say: jest.fn(),
+      room: {
+        cSites: [],
+        controller
+      }
+    });
+
+    HelperFunctions.getRoomStructuresArray.mockReturnValue([]);
+
+    runBuilderRole(creep);
+
     expect(creep.upgradeController).toHaveBeenCalledWith(controller);
     expect(creep.moveTo).toHaveBeenCalledWith(controller, expect.anything());
+  });
+
+  it('should switch to working state when full', () => {
+    const constructionSite = mockInstanceOf<ConstructionSite>({});
+    
+    const creep = mockInstanceOf<Creep>({
+      memory: { role: 'builder', working: false },
+      store: { 
+        [RESOURCE_ENERGY]: 50,
+        getUsedCapacity: jest.fn(() => 50),
+        getFreeCapacity: jest.fn(() => 0) 
+      },
+      build: jest.fn(() => OK),
+      say: jest.fn(),
+      room: {
+        cSites: [constructionSite]
+      }
+    });
+
+    HelperFunctions.getRoomStructuresArray.mockReturnValue([]);
+
+    runBuilderRole(creep);
+
+    expect(creep.memory.working).toBe(true);
+    expect(creep.say).toHaveBeenCalledWith("⚡ build");
+  });
+
+  it('should switch to collecting state when empty', () => {
+    const creep = mockInstanceOf<Creep>({
+      memory: { role: 'builder', working: true },
+      store: { 
+        [RESOURCE_ENERGY]: 0,
+        getUsedCapacity: jest.fn(() => 0),
+        getFreeCapacity: jest.fn(() => 50) 
+      },
+      say: jest.fn(),
+      room: {
+        cSites: []
+      }
+    });
+
+    HelperFunctions.getRoomStructuresArray.mockReturnValue([]);
+    HelperFunctions.getGreatestEnergyDrop.mockReturnValue(undefined);
+
+    runBuilderRole(creep);
+
+    expect(creep.memory.working).toBe(false);
+    expect(creep.say).toHaveBeenCalledWith("🔄 collect");
+  });
+
+  it('should pick up dropped energy when no storage available', () => {
+    const droppedEnergy = mockInstanceOf<Resource>({
+      resourceType: RESOURCE_ENERGY,
+      amount: 100
+    });
+    
+    const creep = mockInstanceOf<Creep>({
+      memory: { role: 'builder', working: false },
+      store: { 
+        [RESOURCE_ENERGY]: 0,
+        getUsedCapacity: jest.fn(() => 0),
+        getFreeCapacity: jest.fn(() => 50) 
+      },
+      pickup: jest.fn(() => OK),
+      moveTo: jest.fn(() => OK),
+      pos: {
+        isNearTo: jest.fn(() => false)
+      },
+      say: jest.fn(),
+      room: {
+        cSites: []
+      }
+    });
+
+    HelperFunctions.getRoomStructuresArray.mockReturnValue([]);
+    HelperFunctions.getGreatestEnergyDrop.mockReturnValue(droppedEnergy);
+
+    runBuilderRole(creep);
+
+    expect(creep.moveTo).toHaveBeenCalledWith(droppedEnergy, expect.anything());
   });
 });

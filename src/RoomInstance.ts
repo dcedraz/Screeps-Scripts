@@ -1,5 +1,5 @@
 import { SpawnerInstance, createSpawnerInstance, spawnQueueAdd, runSpawner } from "SpawnerInstance";
-import { CreepsInstance } from "CreepsInstance";
+import { CreepsInstance, createCreepsInstance, createSpawnWorkOrder, runCreeps } from "CreepsInstance";
 import { StructuresInstance } from "StructuresInstance";
 import { HelperFunctions } from "utils/HelperFunctions";
 
@@ -23,7 +23,7 @@ export function createRoomInstance(room: Room): RoomInstance {
     roomStructuresInstance: new StructuresInstance(room, room.sources.filter(
       (source) => !HelperFunctions.isHostileNearby(source)
     )),
-    roomCreeps: new CreepsInstance(room)
+    roomCreeps: createCreepsInstance(room)
   };
 }
 
@@ -53,10 +53,11 @@ export function spawnHarvesters(roomInstance: RoomInstance): void {
     let targetSource = findAvailableSources(roomInstance, roomCreeps.harvesters)[0];
     spawnQueueAdd(
       roomSpawner,
-      roomCreeps.newCreep(
+      createSpawnWorkOrder(
         "harvester",
-        roomCreeps.MyCreepBodies.harvesters,
+        roomCreeps.creepBodies.harvesters,
         roomCreeps.harvesters.length < 2 ? 10 : 21,
+        roomInstance.room.name,
         targetSource
       )
     );
@@ -71,10 +72,11 @@ export function spawnHaulers(roomInstance: RoomInstance): void {
 
     spawnQueueAdd(
       roomSpawner,
-      roomCreeps.newCreep(
+      createSpawnWorkOrder(
         "hauler",
-        roomCreeps.MyCreepBodies.haulers,
+        roomCreeps.creepBodies.haulers,
         roomCreeps.harvesters.length < 2 ? 9 : 10,
+        roomInstance.room.name,
         targetSource
       )
     );
@@ -87,7 +89,7 @@ export function spawnUpgraders(roomInstance: RoomInstance): void {
   if (roomController && roomCreeps.upgraders.length < 3) {
     spawnQueueAdd(
       roomSpawner,
-      roomCreeps.newCreep("upgrader", roomCreeps.MyCreepBodies.upgraders, 20)
+      createSpawnWorkOrder("upgrader", roomCreeps.creepBodies.upgraders, 20, roomInstance.room.name)
     );
   }
 }
@@ -98,10 +100,11 @@ export function spawnBuilders(roomInstance: RoomInstance): void {
   if (roomController && roomCreeps.builders.length < 1 && roomController.level > 1) {
     spawnQueueAdd(
       roomSpawner,
-      roomCreeps.newCreep(
+      createSpawnWorkOrder(
         "builder",
-        roomCreeps.MyCreepBodies.builders,
-        roomCreeps.builders.length < 1 ? 10 : 21
+        roomCreeps.creepBodies.builders,
+        roomCreeps.builders.length < 1 ? 10 : 21,
+        roomInstance.room.name
       )
     );
   }
@@ -117,6 +120,6 @@ export function runSpawnLogic(roomInstance: RoomInstance): void {
 export function runRoom(roomInstance: RoomInstance): void {
   runSafeMode(roomInstance);
   runSpawnLogic(roomInstance);
-  roomInstance.roomCreeps.run();
+  runCreeps(roomInstance.roomCreeps);
   runSpawner(roomInstance.roomSpawner);
 }
