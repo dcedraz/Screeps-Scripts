@@ -78,11 +78,9 @@ storage.db['rooms.objects'].update({ _id: 'idOfController' },{ $set: { level: 8 
 ```
 
 ## Issues and TODOs
-1. Refactor to functional programming
-    Only missing StructureInstance class, all the rest is done already.
-2. Refactor Harvesters logic to only drop energy when Hauler exists
-3. Implement logic to spawn upgraders only when surplus of energy exists
-4. Haulers should do something when there is no storage left
-5. Calculate how many builders are needed
-6. Build a visual status of the room
-7. Build logic for multiroom operation
+1. Refactor Harvesters logic to only drop energy when Hauler exists
+2. Implement logic to spawn upgraders only when surplus of energy exists
+3. Haulers should do something when there is no storage left
+4. Calculate how many builders are needed
+5. Build a visual status of the room
+6. Build logic for multiroom operation

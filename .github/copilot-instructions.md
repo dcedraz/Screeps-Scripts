@@ -54,7 +54,6 @@
 
 ## Planned Changes
 
-- **Migration to Functional Programming:** Classes representing game objects and concepts are planned to be refactored to a more functional approach. Only the StructureInstance class is left to be migrated, all the rest is completed already.
 - **CostMatrix Refactor:** Improve performance and support for more structure types.
 - **Other Planned Changes:** See `README.md` Issues and TODOs section for additional refactoring, logic improvements, and feature plans (e.g., multiroom logic, builder calculation, visual status, etc.).
 

@@ -139,7 +139,7 @@ function createTestCostMatrix(room: Room): CostMatrixData {
       // Mock getCost to simulate blocked positions
       const getCostSpy = jest.spyOn(require('../../src/utils/CostMatrix'), 'getCost');
       getCostSpy.mockImplementation((...args: unknown[]) => {
-        const [matrix, x, y] = args as [any, number, number];
+        const [matrix, x, y] = args as [CostMatrixData, number, number];
         // Block distance-1 positions around (25,25) by returning 255
         if ((x === 26 && y === 25) || (x === 24 && y === 25) || 
             (x === 25 && y === 26) || (x === 25 && y === 24)) {
@@ -273,7 +273,7 @@ function createTestCostMatrix(room: Room): CostMatrixData {
 
   describe('resetRoomPositions', () => {
     it('should log message and attempt to delete room positions from memory', () => {
-      const testMemory: any = { roomPositions: { some: 'data' } };
+      const testMemory: Partial<RoomMemory> = { roomPositions: { some: 'data' } };
       const room = {
         name: 'W1N1',
         memory: testMemory
