@@ -14,10 +14,24 @@ jest.mock('../../src/utils/HelperFunctions', () => ({
     emptyBaseStructures: jest.fn(() => ({
       spawn: [], storage: [], link: [], tower: [], road: [], extension: [], container: [], wall: [], rampart: []
     })),
-    memoizeRoomPositions: jest.fn((fn, r) => fn),
-    memoizeCostMatrix: jest.fn((fn, r) => fn),
   }
 }));
+
+jest.mock('../../src/StructuresInstance', () => {
+  const actual = jest.requireActual('../../src/StructuresInstance');
+  return {
+    ...actual,
+    memoizeRoomPositions: jest.fn((fn, r) => fn),
+  };
+});
+
+jest.mock('../../src/utils/CostMatrix', () => {
+  const actual = jest.requireActual('../../src/utils/CostMatrix');
+  return {
+    ...actual,
+    memoizeCostMatrix: jest.fn((fn, r) => fn),
+  };
+});
 
 const HelperFunctions = require('../../src/utils/HelperFunctions').HelperFunctions;
 
@@ -111,10 +125,13 @@ describe('StructuresInstance', () => {
   });
 
   it('memoization works with real HelperFunctions (integration test)', () => {
-    // Temporarily restore real memoization functions for this test
-    const HelperFunctionsModule = require('../../src/utils/HelperFunctions');
-    const realMemoizeCostMatrix = HelperFunctionsModule.HelperFunctions.memoizeCostMatrix;
-    const realMemoizeRoomPositions = HelperFunctionsModule.HelperFunctions.memoizeRoomPositions;
+    // Test cost matrix memoization from CostMatrix module
+    const CostMatrixModule = require('../../src/utils/CostMatrix');
+    const realMemoizeCostMatrix = CostMatrixModule.memoizeCostMatrix;
+    
+    // Test room positions memoization from StructuresInstance module  
+    const StructuresModule = require('../../src/StructuresInstance');
+    const realMemoizeRoomPositions = StructuresModule.memoizeRoomPositions;
     
     // Use a room with real memory behavior
     const room = makeRoom({
@@ -140,8 +157,43 @@ describe('StructuresInstance', () => {
     expect(memoizedRoomFn("testKey")).toEqual({ test: "data" });
   });
 
+  it('memoizeCostMatrix function works correctly (moved from HelperFunctions)', () => {
+    // Get the unmocked version directly
+    jest.unmock('../../src/utils/CostMatrix');
+    const CostMatrixModule = jest.requireActual('../../src/utils/CostMatrix');
+    const memoizeCostMatrix = CostMatrixModule.memoizeCostMatrix;
+    
+    const room: any = { memory: {} };
+    let callCount = 0;
+    const fn = jest.fn((n: string) => { callCount++; return n + '1'; });
+    const memo = memoizeCostMatrix(fn, room);
+    
+    expect(memo('foo')).toBe('foo1');
+    expect(memo('foo')).toBe('foo1');
+    expect(callCount).toBe(1);
+    expect(room.memory.roomCostMatrix.foo).toBe('foo1');
+  });
+
+  it('memoizeRoomPositions function works correctly (moved from HelperFunctions)', () => {
+    // Get the unmocked version directly
+    jest.unmock('../../src/StructuresInstance');
+    const StructuresModule = jest.requireActual('../../src/StructuresInstance');
+    const memoizeRoomPositions = StructuresModule.memoizeRoomPositions;
+    
+    const room: any = { memory: {} };
+    let callCount = 0;
+    const fn = jest.fn((n: string) => { callCount++; return n + '2'; });
+    const memo = memoizeRoomPositions(fn, room);
+    
+    expect(memo('bar')).toBe('bar2');
+    expect(memo('bar')).toBe('bar2');
+    expect(callCount).toBe(1);
+    expect(room.memory.roomPositions.bar).toBe('bar2');
+  });
+
   it('creates structures data with memoized cost matrix and room positions', () => {
-    // Patch HelperFunctions.memoizeCostMatrix to a real memoizer for this test
+    // Patch memoizeCostMatrix to a real memoizer for this test
+    const CostMatrixModule = require('../../src/utils/CostMatrix');
     const realMemo = (fn: any, _room: any) => {
       const cache: Record<string, any> = {};
       return (key: string) => {
@@ -149,8 +201,8 @@ describe('StructuresInstance', () => {
         return cache[key];
       };
     };
-    const orig = HelperFunctions.memoizeCostMatrix;
-    HelperFunctions.memoizeCostMatrix = realMemo;
+    const orig = CostMatrixModule.memoizeCostMatrix;
+    CostMatrixModule.memoizeCostMatrix = realMemo;
     
     const room = makeRoom();
     Game.rooms[room.name] = mockInstanceOf<Room>({
@@ -175,7 +227,7 @@ describe('StructuresInstance', () => {
       })
     );
     
-    HelperFunctions.memoizeCostMatrix = orig;
+    CostMatrixModule.memoizeCostMatrix = orig;
   });
 
   it('calculates room positions based on spawn location', () => {

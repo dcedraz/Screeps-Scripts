@@ -6,6 +6,25 @@ export interface CostMatrixData {
   readonly roomName: string;
 }
 
+// Memoization function
+export function memoizeCostMatrix(fn: any, room: Room) {
+  if (!room.memory.roomCostMatrix) {
+    room.memory.roomCostMatrix = {};
+  }
+  return (...args: any[]) => {
+    let n = args[0];
+    if (n in room.memory.roomCostMatrix) {
+      //console.log("Fetching CostMatrix from memory");
+      return room.memory.roomCostMatrix[n];
+    } else {
+      //console.log("Calculating CostMatrix for room: ", n);
+      let result = fn(n);
+      room.memory.roomCostMatrix[n] = result;
+      return result;
+    }
+  };
+}
+
 // Factory function
 export function createCostMatrix(room: Room): CostMatrixData {
   return getMemoizedCostMatrix(room);
@@ -97,7 +116,7 @@ export function deserializeCostMatrix(serialized: string, roomName: string): Cos
 
 // Memoization wrapper
 export function getMemoizedCostMatrix(room: Room): CostMatrixData {
-  const memoizedMatrix = HelperFunctions.memoizeCostMatrix(
+  const memoizedMatrix = memoizeCostMatrix(
     () => serializeCostMatrix(calculateCostMatrix(room)),
     room
   );

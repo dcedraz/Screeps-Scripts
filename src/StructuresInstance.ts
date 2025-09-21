@@ -9,6 +9,25 @@ export interface StructuresData {
   readonly roomController: StructureController | undefined;
 }
 
+// Memoization function
+export function memoizeRoomPositions(fn: any, room: Room) {
+  if (!room.memory.roomPositions) {
+    room.memory.roomPositions = {};
+  }
+  return (...args: any[]) => {
+    let n = args[0];
+    if (n in room.memory.roomPositions) {
+      // console.log("Fetching RoomPositions from memory");
+      return room.memory.roomPositions[n];
+    } else {
+      // console.log("Calculating RoomPositions for room: ", n);
+      let result = fn(n);
+      room.memory.roomPositions[n] = result;
+      return result;
+    }
+  };
+}
+
 // Factory function
 export function createStructuresData(room: Room, sources: Source[]): StructuresData {
   const costMatrix = createCostMatrix(room);
@@ -277,7 +296,7 @@ export function createSourceStructures(room: Room, sources: Source[], costMatrix
 
 // Memoization wrapper
 export function getMemoizedRoomPositions(room: Room, costMatrix: CostMatrixData): BaseStructures {
-  const memoizedcalcRoomPositions = HelperFunctions.memoizeRoomPositions(
+  const memoizedcalcRoomPositions = memoizeRoomPositions(
     () => calculateRoomPositions(room, costMatrix),
     room
   );

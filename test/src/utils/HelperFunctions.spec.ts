@@ -87,32 +87,6 @@ describe('HelperFunctions', () => {
     });
   });
 
-  describe('memoizeCostMatrix', () => {
-    it('memoizes results in room.memory.roomCostMatrix', () => {
-      const room: any = { memory: {} };
-      let callCount = 0;
-      const fn = jest.fn((n) => { callCount++; return n + 1; });
-      const memo = HelperFunctions.memoizeCostMatrix(fn, room);
-      expect(memo('foo')).toBe('foo1');
-      expect(memo('foo')).toBe('foo1');
-      expect(callCount).toBe(1);
-      expect(room.memory.roomCostMatrix.foo).toBe('foo1');
-    });
-  });
-
-  describe('memoizeRoomPositions', () => {
-    it('memoizes results in room.memory.roomPositions', () => {
-      const room: any = { memory: {} };
-      let callCount = 0;
-      const fn = jest.fn((n) => { callCount++; return n + 2; });
-      const memo = HelperFunctions.memoizeRoomPositions(fn, room);
-      expect(memo('bar')).toBe('bar2');
-      expect(memo('bar')).toBe('bar2');
-      expect(callCount).toBe(1);
-      expect(room.memory.roomPositions.bar).toBe('bar2');
-    });
-  });
-
   describe('emptyBaseStructures', () => {
     it('returns an object with all structure arrays', () => {
       const result = HelperFunctions.emptyBaseStructures();

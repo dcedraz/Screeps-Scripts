@@ -59,42 +59,6 @@ export class HelperFunctions {
     return false;
   }
 
-  public static memoizeCostMatrix = (fn: any, r: Room) => {
-    if (!r.memory.roomCostMatrix) {
-      r.memory.roomCostMatrix = {};
-    }
-    return (...args: any[]) => {
-      let n = args[0];
-      if (n in r.memory.roomCostMatrix) {
-        //console.log("Fetching CostMatrix from memory");
-        return r.memory.roomCostMatrix[n];
-      } else {
-        //console.log("Calculating CostMatrix for room: ", n);
-        let result = fn(n);
-        r.memory.roomCostMatrix[n] = result;
-        return result;
-      }
-    };
-  };
-
-  public static memoizeRoomPositions = (fn: any, r: Room) => {
-    if (!r.memory.roomPositions) {
-      r.memory.roomPositions = {};
-    }
-    return (...args: any[]) => {
-      let n = args[0];
-      if (n in r.memory.roomPositions) {
-        // console.log("Fetching RoomPositions from memory");
-        return r.memory.roomPositions[n];
-      } else {
-        // console.log("Calculating RoomPositions for room: ", n);
-        let result = fn(n);
-        r.memory.roomPositions[n] = result;
-        return result;
-      }
-    };
-  };
-
   public static emptyBaseStructures(): BaseStructures {
     return {
       spawn: [],
