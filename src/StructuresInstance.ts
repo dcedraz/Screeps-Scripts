@@ -163,9 +163,9 @@ export function calculateRoomPositions(room: Room, costMatrix: CostMatrixData): 
   }
 
   // Calculate Roads positions
-  const roadsFromSpawn = calculateRoadsAroundStructures(roomPositions.spawn);
-  const roadsFromStorage = calculateRoadsAroundStructures(roomPositions.storage);
-  const roadsFromLink = calculateRoadsAroundStructures(roomPositions.link);
+  const roadsFromSpawn = calculateRoadsAroundStructures(roomPositions.spawn, costMatrix, room);
+  const roadsFromStorage = calculateRoadsAroundStructures(roomPositions.storage, costMatrix, room);
+  const roadsFromLink = calculateRoadsAroundStructures(roomPositions.link, costMatrix, room);
   
   roomPositions.road.push(...roadsFromSpawn, ...roadsFromStorage, ...roadsFromLink);
 
@@ -200,7 +200,11 @@ export function checkPosOnMatrix(costMatrix: CostMatrixData, room: Room, x: numb
   return null;
 }
 
-export function calculateRoadsAroundStructures(structures: StructPos[]): StructPos[] {
+export function calculateRoadsAroundStructures(
+  structures: StructPos[], 
+  costMatrix: CostMatrixData, 
+  room: Room
+): StructPos[] {
   const roads: StructPos[] = [];
   
   for (const pos of structures) {
@@ -215,11 +219,14 @@ export function calculateRoadsAroundStructures(structures: StructPos[]): StructP
       ];
       
       for (const roadPos of roadPositions) {
-        roads.push({
-          x: roadPos.x,
-          y: roadPos.y,
-          built: false,
-        });
+        const validPos = checkPosOnMatrix(costMatrix, room, roadPos.x, roadPos.y);
+        if (validPos) {
+          roads.push({
+            x: roadPos.x,
+            y: roadPos.y,
+            built: false,
+          });
+        }
       }
     }
   }
