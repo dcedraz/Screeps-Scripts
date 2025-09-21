@@ -159,4 +159,48 @@ describe('runHaulerRole (Functional)', () => {
 
     expect(creep.pickup).toHaveBeenCalledWith(droppedEnergy);
   });
+
+  it('should prioritize storage structures in correct order: Spawn > Extension > Tower > Storage', () => {
+    const spawn = mockInstanceOf<StructureSpawn>({
+      structureType: STRUCTURE_SPAWN,
+      store: { getFreeCapacity: jest.fn(() => 100) }
+    });
+    
+    const extension = mockInstanceOf<StructureExtension>({
+      structureType: STRUCTURE_EXTENSION,
+      store: { getFreeCapacity: jest.fn(() => 50) }
+    });
+    
+    const tower = mockInstanceOf<StructureTower>({
+      structureType: STRUCTURE_TOWER,
+      store: { getFreeCapacity: jest.fn(() => 200) }
+    });
+    
+    const storage = mockInstanceOf<StructureStorage>({
+      structureType: STRUCTURE_STORAGE,
+      store: { getFreeCapacity: jest.fn(() => 1000) }
+    });
+    
+    const creep = mockInstanceOf<Creep>({
+      memory: { role: 'hauler', working: true },
+      store: { getUsedCapacity: jest.fn(() => 50) },
+      pos: {
+        findInRange: jest.fn(() => []),
+        isNearTo: jest.fn(() => true)
+      },
+      transfer: jest.fn(() => OK),
+      room: {}
+    });
+
+    HelperFunctions.getRoomStructuresArray.mockReturnValue([spawn, extension, tower, storage]);
+    HelperFunctions.isSpawn.mockReturnValue(true);
+    HelperFunctions.isExtension.mockReturnValue(true);
+    HelperFunctions.isTower.mockReturnValue(true);
+    HelperFunctions.isStorage.mockReturnValue(true);
+
+    runHaulerRole(creep);
+
+    // Should prioritize spawn first
+    expect(creep.transfer).toHaveBeenCalledWith(spawn, RESOURCE_ENERGY);
+  });
 });

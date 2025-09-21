@@ -62,7 +62,7 @@ function getGreatestDroppedEnergy(creep: Creep): void {
 }
 
 function storeEnergy(creep: Creep): void {
-  const targets = sortStorageTargetsByType(creep);
+  const targets = prioritizeStorageTargetsByType(creep);
   if (targets.length > 0) {
     if (!creep.pos.isNearTo(targets[0])) {
       creep.moveTo(targets[0], { visualizePathStyle: { stroke: "#ffffff" } });
@@ -71,7 +71,7 @@ function storeEnergy(creep: Creep): void {
   }
 }
 
-function sortStorageTargetsByType(creep: Creep): Structure[] {
+function prioritizeStorageTargetsByType(creep: Creep): Structure[] {
   const targets = HelperFunctions.getRoomStructuresArray(creep.room).filter(
     (structure: Structure) => {
       return (
@@ -84,27 +84,14 @@ function sortStorageTargetsByType(creep: Creep): Structure[] {
     }
   );
 
-  const sortedTargets: Structure[] = [];
-  // Priority order: Spawn -> Extension -> Tower -> Storage
-  for (let i = 0; i < targets.length; i++) {
-    if (HelperFunctions.isSpawn(targets[i])) {
-      sortedTargets.push(targets[i]);
-    }
+  // Assign priority: Spawn (1), Extension (2), Tower (3), Storage (4)
+  const getPriority = (structure: Structure): number => {
+    if (HelperFunctions.isSpawn(structure)) return 1;
+    if (HelperFunctions.isExtension(structure)) return 2;
+    if (HelperFunctions.isTower(structure)) return 3;
+    if (HelperFunctions.isStorage(structure)) return 4;
+    return 5;
   }
-  for (let i = 0; i < targets.length; i++) {
-    if (HelperFunctions.isExtension(targets[i])) {
-      sortedTargets.push(targets[i]);
-    }
-  }
-  for (let i = 0; i < targets.length; i++) {
-    if (HelperFunctions.isTower(targets[i])) {
-      sortedTargets.push(targets[i]);
-    }
-  }
-  for (let i = 0; i < targets.length; i++) {
-    if (HelperFunctions.isStorage(targets[i])) {
-      sortedTargets.push(targets[i]);
-    }
-  }
-  return sortedTargets;
+
+  return targets.sort((a, b) => getPriority(a) - getPriority(b));
 }

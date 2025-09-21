@@ -149,4 +149,49 @@ describe('runUpgraderRole (Functional)', () => {
 
     expect(creep.withdraw).toHaveBeenCalledWith(container, RESOURCE_ENERGY);
   });
+
+  it('should prioritize energy collection in correct order: Storage > Container > Extension > Spawn', () => {
+    const storage = mockInstanceOf<StructureStorage>({
+      structureType: STRUCTURE_STORAGE,
+      store: { getUsedCapacity: jest.fn(() => 1000) }
+    });
+    
+    const container = mockInstanceOf<StructureContainer>({
+      structureType: STRUCTURE_CONTAINER,
+      store: { getUsedCapacity: jest.fn(() => 300) }
+    });
+    
+    const extension = mockInstanceOf<StructureExtension>({
+      structureType: STRUCTURE_EXTENSION,
+      store: { getUsedCapacity: jest.fn(() => 50) }
+    });
+    
+    const spawn = mockInstanceOf<StructureSpawn>({
+      structureType: STRUCTURE_SPAWN,
+      store: { getUsedCapacity: jest.fn(() => 200) }
+    });
+    
+    const creep = mockInstanceOf<Creep>({
+      memory: { role: 'upgrader', working: false },
+      store: { 
+        [RESOURCE_ENERGY]: 0,
+        getUsedCapacity: jest.fn(() => 0),
+        getFreeCapacity: jest.fn(() => 50) 
+      },
+      withdraw: jest.fn(() => OK),
+      say: jest.fn(),
+      room: {}
+    });
+
+    HelperFunctions.getRoomStructuresArray.mockReturnValue([storage, container, extension, spawn]);
+    HelperFunctions.isStorage.mockReturnValue(true);
+    HelperFunctions.isContainer.mockReturnValue(true);
+    HelperFunctions.isExtension.mockReturnValue(true);
+    HelperFunctions.isSpawn.mockReturnValue(true);
+
+    runUpgraderRole(creep);
+
+    // Should prioritize storage first
+    expect(creep.withdraw).toHaveBeenCalledWith(storage, RESOURCE_ENERGY);
+  });
 });
