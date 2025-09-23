@@ -1,6 +1,6 @@
 import { SpawnerInstance, createSpawnerInstance, spawnQueueAdd, runSpawner } from "SpawnerInstance";
 import { CreepsInstance, createCreepsInstance, createSpawnWorkOrder, runCreeps } from "CreepsInstance";
-import { StructuresInstance } from "StructuresInstance";
+import { StructuresData, createStructuresData } from "StructuresInstance";
 import { HelperFunctions } from "utils/HelperFunctions";
 
 export interface RoomInstance {
@@ -8,21 +8,21 @@ export interface RoomInstance {
   roomController: StructureController | undefined;
   roomSpawner: SpawnerInstance;
   roomSources: Source[];
-  roomStructuresInstance: StructuresInstance;
+  roomStructuresData: StructuresData;
   roomCreeps: CreepsInstance;
 }
 
 export function createRoomInstance(room: Room): RoomInstance {
+  const sources = room.sources.filter(
+    (source) => !HelperFunctions.isHostileNearby(source)
+  );
+  
   return {
     room,
     roomController: room.controller,
     roomSpawner: createSpawnerInstance(room),
-    roomSources: room.sources.filter(
-      (source) => !HelperFunctions.isHostileNearby(source)
-    ),
-    roomStructuresInstance: new StructuresInstance(room, room.sources.filter(
-      (source) => !HelperFunctions.isHostileNearby(source)
-    )),
+    roomSources: sources,
+    roomStructuresData: createStructuresData(room, sources),
     roomCreeps: createCreepsInstance(room)
   };
 }

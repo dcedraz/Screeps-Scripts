@@ -2,7 +2,7 @@ import { mockInstanceOf } from 'screeps-jest';
 import { createRoomInstance, runSafeMode, findAvailableSources, spawnHarvesters, spawnHaulers, spawnUpgraders, spawnBuilders, runSpawnLogic, runRoom } from '../../src/RoomInstance';
 import { SpawnerInstance, createSpawnerInstance, spawnQueueAdd, runSpawner } from "SpawnerInstance";
 import { CreepsInstance, createCreepsInstance, createSpawnWorkOrder, runCreeps } from "CreepsInstance";
-import { StructuresInstance } from "StructuresInstance";
+import { StructuresData, createStructuresData } from "StructuresInstance";
 
 jest.mock("SpawnerInstance");
 jest.mock("CreepsInstance");
@@ -19,21 +19,21 @@ function createRoomInstanceForTesting({
     room: mockInstanceOf<Room>({}),
     spawns: [],
     spawnQueue: [],
-  } as SpawnerInstance,
+  },
   creepsInstance = {
     room: mockInstanceOf<Room>({}),
-    creeps: [] as Creep[],
-    harvesters: [] as Creep[],
-    haulers: [] as Creep[],
-    upgraders: [] as Creep[],
-    builders: [] as Creep[],
+    creeps: [],
+    harvesters: [],
+    haulers: [],
+    upgraders: [],
+    builders: [],
     creepBodies: {
-      harvesters: ['work', 'move'] as BodyPartConstant[],
-      haulers: ['carry', 'move'] as BodyPartConstant[],
-      upgraders: ['work', 'carry', 'move'] as BodyPartConstant[],
-      builders: ['work', 'carry', 'move'] as BodyPartConstant[],
+      harvesters: [WORK, CARRY, MOVE],
+      haulers: [CARRY, CARRY, MOVE],
+      upgraders: [WORK, CARRY, MOVE],
+      builders: [WORK, CARRY, MOVE],
     },
-  } as CreepsInstance,
+  },
   sources = [
     mockInstanceOf<Source>({ 
       id: 'source1',
@@ -44,15 +44,22 @@ function createRoomInstanceForTesting({
       pos: { findInRange: jest.fn(() => []) }
     })
   ],
-  structures = mockInstanceOf<StructuresInstance>({}),
+  structuresData = mockInstanceOf<StructuresData>({
+    roomName: 'TestRoom',
+    roomPositions: {
+      spawn: [], storage: [], link: [], tower: [], road: [], extension: [], container: [], wall: [], rampart: []
+    },
+    roomSources: sources,
+    roomController: controller
+  }),
 }: {
   controller?: StructureController;
   spawner?: SpawnerInstance;
   creepsInstance?: CreepsInstance;
-  structures?: StructuresInstance;
+  structuresData?: StructuresData;
   sources?: Source[];
 } = {}) {
-  // Mock the constructor calls
+    // Mock the constructor calls
   (createSpawnerInstance as jest.MockedFunction<typeof createSpawnerInstance>).mockReturnValue(spawner);
   (spawnQueueAdd as jest.MockedFunction<typeof spawnQueueAdd>).mockImplementation(() => {});
   (runSpawner as jest.MockedFunction<typeof runSpawner>).mockImplementation(() => {});
@@ -64,7 +71,7 @@ function createRoomInstanceForTesting({
     priority: priority,
   }));
   (runCreeps as jest.MockedFunction<typeof runCreeps>).mockImplementation(() => {});
-  (StructuresInstance as jest.MockedClass<typeof StructuresInstance>).mockImplementation(() => structures);
+  (createStructuresData as jest.MockedFunction<typeof createStructuresData>).mockReturnValue(structuresData);
 
   const room = mockInstanceOf<Room>({ 
     controller, 
@@ -76,7 +83,7 @@ function createRoomInstanceForTesting({
     room,
     spawner,
     creeps: creepsInstance,
-    structures,
+    structuresData,
     sources
   };
 }
@@ -88,7 +95,7 @@ describe('RoomInstance', () => {
 
   describe('createRoomInstance', () => {
     it('creates a room instance with all required properties', () => {
-      const { room, spawner, creeps, structures, sources } = createRoomInstanceForTesting();
+      const { room, spawner, creeps, structuresData, sources } = createRoomInstanceForTesting();
       
       const roomInstance = createRoomInstance(room);
 
@@ -96,7 +103,7 @@ describe('RoomInstance', () => {
       expect(roomInstance.roomController).toBe(room.controller);
       expect(roomInstance.roomSpawner).toBe(spawner);
       expect(roomInstance.roomSources).toEqual(sources);
-      expect(roomInstance.roomStructuresInstance).toBe(structures);
+      expect(roomInstance.roomStructuresData).toBe(structuresData);
       expect(roomInstance.roomCreeps).toBe(creeps);
     });
   });

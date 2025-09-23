@@ -3316,42 +3316,6 @@ class HelperFunctions {
 HelperFunctions.findCarryPartsRequired = function (distance, income) {
     return (distance * 2 * income) / CARRY_CAPACITY;
 };
-HelperFunctions.memoizeCostMatrix = (fn, r) => {
-    if (!r.memory.roomCostMatrix) {
-        r.memory.roomCostMatrix = {};
-    }
-    return (...args) => {
-        let n = args[0];
-        if (n in r.memory.roomCostMatrix) {
-            //console.log("Fetching CostMatrix from memory");
-            return r.memory.roomCostMatrix[n];
-        }
-        else {
-            //console.log("Calculating CostMatrix for room: ", n);
-            let result = fn(n);
-            r.memory.roomCostMatrix[n] = result;
-            return result;
-        }
-    };
-};
-HelperFunctions.memoizeRoomPositions = (fn, r) => {
-    if (!r.memory.roomPositions) {
-        r.memory.roomPositions = {};
-    }
-    return (...args) => {
-        let n = args[0];
-        if (n in r.memory.roomPositions) {
-            // console.log("Fetching RoomPositions from memory");
-            return r.memory.roomPositions[n];
-        }
-        else {
-            // console.log("Calculating RoomPositions for room: ", n);
-            let result = fn(n);
-            r.memory.roomPositions[n] = result;
-            return result;
-        }
-    };
-};
 
 function createSpawnerInstance(room, spawns = room.structures.spawn, spawnQueue = []) {
     return {
@@ -3419,835 +3383,761 @@ function spawnQueueRemove(spawnerInstance, spawnRequest) {
     }
 }
 
-class RoleHarvester {
-    constructor(creep) {
-        this.creep = creep;
+function runHarvesterRole(creep) {
+    if (creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+        repairNearbyContainer(creep);
+        giveEnergyToNearbyCreeps$1(creep);
     }
-    repairNerbyContainer() {
-        let containers = this.creep.pos.findInRange(FIND_STRUCTURES, 1, {
-            filter: (structure) => structure.structureType == STRUCTURE_CONTAINER && structure.hits < structure.hitsMax,
-        });
-        if (containers.length > 0) {
-            this.creep.repair(containers[0]);
-        }
-    }
-    giveEnergyToNerbyCreeps() {
-        let creeps = this.creep.pos.findInRange(FIND_MY_CREEPS, 1, {
-            filter: (creep) => creep.memory.role != "harvester",
-        });
-        if (creeps.length > 0) {
-            this.creep.transfer(creeps[0], RESOURCE_ENERGY);
-        }
-    }
-    runInitial() {
-        if (this.creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
-            this.repairNerbyContainer();
-            this.giveEnergyToNerbyCreeps();
-        }
-        if (this.creep.memory.assigned_source) {
-            var source = Game.getObjectById(this.creep.memory.assigned_source);
-            let container;
-            if (source) {
-                container = source.pos.findInRange(FIND_STRUCTURES, 1, {
-                    filter: (structure) => HelperFunctions.isContainer(structure) && structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
-                });
-            }
-            if (container && container.length > 0) {
-                if (!this.creep.pos.isEqualTo(container[0])) {
-                    this.creep.moveTo(container[0]);
-                }
-                if (source) {
-                    if (this.creep.harvest(source) == ERR_NOT_IN_RANGE) {
-                        this.creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
-                    }
-                }
-            }
-            else {
-                if (source) {
-                    if (this.creep.harvest(source) == ERR_NOT_IN_RANGE) {
-                        this.creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
-                    }
-                }
-            }
-        }
-        else {
-            var sources = this.creep.room.sources;
-            if (this.creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
-                this.creep.moveTo(sources[0], { visualizePathStyle: { stroke: "#ffaa00" } });
-            }
-        }
-    }
-}
-
-class RoleHauler {
-    constructor(creep) {
-        this.creep = creep;
-    }
-    giveEnergyToNerbyCreeps() {
-        let creeps = this.creep.pos.findInRange(FIND_MY_CREEPS, 1, {
-            filter: (creep) => creep.memory.role === "builder" || creep.memory.role === "upgrader",
-        });
-        if (creeps.length > 0) {
-            this.creep.transfer(creeps[0], RESOURCE_ENERGY);
-        }
-    }
-    // getEnergyFromSourceContainers() {
-    //   // Get all source containers from memory
-    //   let sourceContainers = this.creep.room.memory.source_containers;
-    //   let targetContainers: StructureContainer[] = [];
-    //   Object.keys(sourceContainers).forEach((source) => {
-    //     for (const containerPos of sourceContainers[source as keyof typeof sourceContainers]) {
-    //       let container = this.creep.room.lookForAt(
-    //         LOOK_STRUCTURES,
-    //         targetContainers[0]
-    //       )[0] as StructureContainer;
-    //       targetContainers.push(container);
-    //     }
-    //   });
-    //   if (targetContainers.length > 0) {
-    //     // Get the container with the most amount of energy
-    //     let targetContainer = targetContainers[0];
-    //     let maxEnergy = 0;
-    //     for (const container of targetContainers) {
-    //       if (container.store.getUsedCapacity(RESOURCE_ENERGY) > maxEnergy) {
-    //         maxEnergy = container.store.getUsedCapacity(RESOURCE_ENERGY);
-    //         targetContainer = container;
-    //       }
-    //     }
-    //     if (!this.creep.pos.isNearTo(targetContainer)) {
-    //       this.creep.moveTo(targetContainer, { visualizePathStyle: { stroke: "#ffffff" } });
-    //     }
-    //     this.creep.withdraw(targetContainer, RESOURCE_ENERGY);
-    //   }
-    // }
-    getGreatestDroppedEnergy() {
-        let target = HelperFunctions.getGreatestEnergyDrop(this.creep.room);
-        if (target) {
-            if (!this.creep.pos.isNearTo(target)) {
-                this.creep.moveTo(target, { visualizePathStyle: { stroke: "#ffffff" } });
-            }
-            this.creep.pickup(target);
-        }
-    }
-    getEnergy() {
-        let source;
-        let droppedEnergyAtSource;
-        let source_container;
-        if (this.creep.memory.assigned_source) {
-            source = Game.getObjectById(this.creep.memory.assigned_source);
-        }
+    if (creep.memory.assigned_source) {
+        const source = Game.getObjectById(creep.memory.assigned_source);
+        let container;
         if (source) {
-            droppedEnergyAtSource = source.pos.findInRange(FIND_DROPPED_RESOURCES, 1);
-            source_container = source.pos.findInRange(FIND_STRUCTURES, 1, {
-                filter: (structure) => HelperFunctions.isContainer(structure),
+            container = source.pos.findInRange(FIND_STRUCTURES, 1, {
+                filter: (structure) => HelperFunctions.isContainer(structure) &&
+                    structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0,
             });
         }
-        if (droppedEnergyAtSource && droppedEnergyAtSource.length > 0) {
-            if (!this.creep.pos.isNearTo(droppedEnergyAtSource[0])) {
-                this.creep.moveTo(droppedEnergyAtSource[0], {
-                    visualizePathStyle: { stroke: "#ffffff" },
-                });
+        if (container && container.length > 0) {
+            if (!creep.pos.isEqualTo(container[0])) {
+                creep.moveTo(container[0]);
             }
-            this.creep.pickup(droppedEnergyAtSource[0]);
-        }
-        else if (source_container && source_container.length > 0) {
-            if (!this.creep.pos.isNearTo(source_container[0])) {
-                this.creep.moveTo(source_container[0], {
-                    visualizePathStyle: { stroke: "#ffffff" },
-                });
-            }
-            this.creep.withdraw(source_container[0], RESOURCE_ENERGY);
-        }
-        else {
-            this.getGreatestDroppedEnergy();
-        }
-    }
-    storeEnergy() {
-        let targets = this.sortStorageTargetsByType();
-        if (targets.length > 0) {
-            if (!this.creep.pos.isNearTo(targets[0])) {
-                this.creep.moveTo(targets[0], { visualizePathStyle: { stroke: "#ffffff" } });
-            }
-            this.creep.transfer(targets[0], RESOURCE_ENERGY);
-        }
-    }
-    sortStorageTargetsByType() {
-        let targets = HelperFunctions.getRoomStructuresArray(this.creep.room).filter((structure) => {
-            return ((HelperFunctions.isExtension(structure) ||
-                HelperFunctions.isStorage(structure) ||
-                HelperFunctions.isTower(structure) ||
-                HelperFunctions.isSpawn(structure)) &&
-                structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
-        });
-        var sortedTargets = [];
-        for (let i = 0; i < targets.length; i++) {
-            if (HelperFunctions.isSpawn(targets[i])) {
-                sortedTargets.push(targets[i]);
-            }
-        }
-        for (let i = 0; i < targets.length; i++) {
-            if (HelperFunctions.isExtension(targets[i])) {
-                sortedTargets.push(targets[i]);
-            }
-        }
-        for (let i = 0; i < targets.length; i++) {
-            if (HelperFunctions.isTower(targets[i])) {
-                sortedTargets.push(targets[i]);
-            }
-        }
-        for (let i = 0; i < targets.length; i++) {
-            if (HelperFunctions.isStorage(targets[i])) {
-                sortedTargets.push(targets[i]);
-            }
-        }
-        return sortedTargets;
-    }
-    run() {
-        if (this.creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
-            this.giveEnergyToNerbyCreeps();
-            this.storeEnergy();
-        }
-        else {
-            this.getEnergy();
-        }
-    }
-}
-
-class RoleBuilder {
-    constructor(creep, myConstructionSites = creep.room.cSites) {
-        this.creep = creep;
-        this.myConstructionSites = myConstructionSites;
-    }
-    run() {
-        if (this.creep.memory.working && this.creep.store[RESOURCE_ENERGY] == 0) {
-            this.creep.memory.working = false;
-            this.creep.say("🔄 collect");
-        }
-        if (!this.creep.memory.working && this.creep.store.getFreeCapacity() == 0) {
-            this.creep.memory.working = true;
-            this.creep.say("⚡ build");
-        }
-        const repairSites = HelperFunctions.getRoomStructuresArray(this.creep.room).filter((structure) => {
-            return structure.hits < structure.hitsMax;
-        });
-        if (!this.creep.memory.working) {
-            this.getEnergy();
-        }
-        if (this.creep.memory.working && this.myConstructionSites.length > 0) {
-            this.runBuild();
-        }
-        else if (this.creep.memory.working && repairSites.length > 0) {
-            //if no construction sites, look for repair sites
-            this.runRepair(repairSites);
-        }
-        else if (this.creep.memory.working) {
-            // if nothing else to do, go upgrade
-            const checkController = this.creep.room.controller;
-            if (checkController) {
-                if (this.creep.upgradeController(checkController) == ERR_NOT_IN_RANGE) {
-                    this.creep.moveTo(checkController, { visualizePathStyle: { stroke: "#ffffff" } });
-                }
-            }
-        }
-    }
-    getEnergy() {
-        var storage = HelperFunctions.getRoomStructuresArray(this.creep.room).filter((structure) => {
-            return ((HelperFunctions.isStorage(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
-                (HelperFunctions.isContainer(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
-                (HelperFunctions.isExtension(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
-                (HelperFunctions.isSpawn(structure) && structure.store[RESOURCE_ENERGY] > 200));
-        });
-        let dropped = HelperFunctions.getGreatestEnergyDrop(this.creep.room);
-        if (storage.length > 0) {
-            if (this.creep.withdraw(storage[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                this.creep.moveTo(storage[0], { visualizePathStyle: { stroke: "#ffaa00" } });
-            }
-        }
-        else if (dropped) {
-            if (!this.creep.pos.isNearTo(dropped)) {
-                this.creep.moveTo(dropped, { visualizePathStyle: { stroke: "#ffaa00" } });
-            }
-            else {
-                this.creep.pickup(dropped);
-            }
-        }
-    }
-    runBuild() {
-        if (this.creep.build(this.myConstructionSites[0]) == ERR_NOT_IN_RANGE) {
-            this.creep.moveTo(this.myConstructionSites[0], { visualizePathStyle: { stroke: "#ffffff" } });
-        }
-    }
-    runRepair(repairSites) {
-        if (repairSites.length > 0) {
-            if (this.creep.repair(repairSites[0]) == ERR_NOT_IN_RANGE) {
-                this.creep.moveTo(repairSites[0], { visualizePathStyle: { stroke: "#ffffff" } });
-            }
-        }
-    }
-}
-
-class RoleUpgrader {
-    constructor(creep) {
-        this.creep = creep;
-    }
-    run() {
-        if (this.creep.memory.working && this.creep.store[RESOURCE_ENERGY] == 0) {
-            this.creep.memory.working = false;
-            this.creep.say("🔄 collect");
-        }
-        if (!this.creep.memory.working && this.creep.store.getFreeCapacity() == 0) {
-            this.creep.memory.working = true;
-            this.creep.say("⚡ upgrade");
-        }
-        if (this.creep.memory.working) {
-            const checkController = this.creep.room.controller;
-            if (checkController) {
-                if (this.creep.upgradeController(checkController) == ERR_NOT_IN_RANGE) {
-                    this.creep.moveTo(checkController, { visualizePathStyle: { stroke: "#ffffff" } });
+            if (source) {
+                if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
                 }
             }
         }
         else {
-            var sources = this.sortStorageTargetsByType();
-            if (sources.length > 0) {
-                if (this.creep.withdraw(sources[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                    this.creep.moveTo(sources[0], { visualizePathStyle: { stroke: "#ffaa00" } });
+            if (source) {
+                if (creep.harvest(source) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(source, { visualizePathStyle: { stroke: "#ffaa00" } });
                 }
             }
         }
     }
-    sortStorageTargetsByType() {
-        let targets = HelperFunctions.getRoomStructuresArray(this.creep.room).filter((structure) => {
-            return ((HelperFunctions.isExtension(structure) ||
-                HelperFunctions.isStorage(structure) ||
-                HelperFunctions.isContainer(structure) ||
-                HelperFunctions.isSpawn(structure)) &&
-                structure.store.getUsedCapacity(RESOURCE_ENERGY) > 0);
-        });
-        var sortedTargets = [];
-        for (let i = 0; i < targets.length; i++) {
-            if (HelperFunctions.isStorage(targets[i])) {
-                sortedTargets.push(targets[i]);
-            }
+    else {
+        const sources = creep.room.sources;
+        if (creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(sources[0], { visualizePathStyle: { stroke: "#ffaa00" } });
         }
-        for (let i = 0; i < targets.length; i++) {
-            if (HelperFunctions.isContainer(targets[i])) {
-                sortedTargets.push(targets[i]);
-            }
-        }
-        for (let i = 0; i < targets.length; i++) {
-            if (HelperFunctions.isExtension(targets[i])) {
-                sortedTargets.push(targets[i]);
-            }
-        }
-        for (let i = 0; i < targets.length; i++) {
-            if (HelperFunctions.isSpawn(targets[i])) {
-                sortedTargets.push(targets[i]);
-            }
-        }
-        return sortedTargets;
+    }
+}
+function repairNearbyContainer(creep) {
+    const containers = creep.pos.findInRange(FIND_STRUCTURES, 1, {
+        filter: (structure) => structure.structureType == STRUCTURE_CONTAINER &&
+            structure.hits < structure.hitsMax,
+    });
+    if (containers.length > 0) {
+        creep.repair(containers[0]);
+    }
+}
+function giveEnergyToNearbyCreeps$1(creep) {
+    const creeps = creep.pos.findInRange(FIND_MY_CREEPS, 1, {
+        filter: (c) => c.memory.role != "harvester",
+    });
+    if (creeps.length > 0) {
+        creep.transfer(creeps[0], RESOURCE_ENERGY);
     }
 }
 
-class CreepsInstance {
-    constructor(room, creeps = room.myCreeps, harvesters = _.filter(creeps, (creep) => creep.memory.role == "harvester"), haulers = _.filter(creeps, (creep) => creep.memory.role == "hauler"), upgraders = _.filter(creeps, (creep) => creep.memory.role == "upgrader"), builders = _.filter(creeps, (creep) => creep.memory.role == "builder"), MyCreepBodies = {
+function runHaulerRole(creep) {
+    if (creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+        giveEnergyToNearbyCreeps(creep);
+        storeEnergy(creep);
+    }
+    else {
+        getEnergy$1(creep);
+    }
+}
+function giveEnergyToNearbyCreeps(creep) {
+    const creeps = creep.pos.findInRange(FIND_MY_CREEPS, 1, {
+        filter: (c) => c.memory.role === "builder" || c.memory.role === "upgrader",
+    });
+    if (creeps.length > 0) {
+        creep.transfer(creeps[0], RESOURCE_ENERGY);
+    }
+}
+function getEnergy$1(creep) {
+    let source;
+    let droppedEnergyAtSource;
+    let source_container;
+    if (creep.memory.assigned_source) {
+        source = Game.getObjectById(creep.memory.assigned_source);
+    }
+    if (source) {
+        droppedEnergyAtSource = source.pos.findInRange(FIND_DROPPED_RESOURCES, 1);
+        source_container = source.pos.findInRange(FIND_STRUCTURES, 1, {
+            filter: (structure) => HelperFunctions.isContainer(structure),
+        });
+    }
+    if (droppedEnergyAtSource && droppedEnergyAtSource.length > 0) {
+        if (!creep.pos.isNearTo(droppedEnergyAtSource[0])) {
+            creep.moveTo(droppedEnergyAtSource[0], {
+                visualizePathStyle: { stroke: "#ffffff" },
+            });
+        }
+        creep.pickup(droppedEnergyAtSource[0]);
+    }
+    else if (source_container && source_container.length > 0) {
+        if (!creep.pos.isNearTo(source_container[0])) {
+            creep.moveTo(source_container[0], {
+                visualizePathStyle: { stroke: "#ffffff" },
+            });
+        }
+        creep.withdraw(source_container[0], RESOURCE_ENERGY);
+    }
+    else {
+        getGreatestDroppedEnergy(creep);
+    }
+}
+function getGreatestDroppedEnergy(creep) {
+    const target = HelperFunctions.getGreatestEnergyDrop(creep.room);
+    if (target) {
+        if (!creep.pos.isNearTo(target)) {
+            creep.moveTo(target, { visualizePathStyle: { stroke: "#ffffff" } });
+        }
+        creep.pickup(target);
+    }
+}
+function storeEnergy(creep) {
+    const targets = prioritizeStorageTargetsByType$1(creep);
+    if (targets.length > 0) {
+        if (!creep.pos.isNearTo(targets[0])) {
+            creep.moveTo(targets[0], { visualizePathStyle: { stroke: "#ffffff" } });
+        }
+        creep.transfer(targets[0], RESOURCE_ENERGY);
+    }
+}
+function prioritizeStorageTargetsByType$1(creep) {
+    const targets = HelperFunctions.getRoomStructuresArray(creep.room).filter((structure) => {
+        return ((HelperFunctions.isExtension(structure) ||
+            HelperFunctions.isStorage(structure) ||
+            HelperFunctions.isTower(structure) ||
+            HelperFunctions.isSpawn(structure)) &&
+            structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
+    });
+    // Assign priority: Spawn (1), Extension (2), Tower (3), Storage (4)
+    const getPriority = (structure) => {
+        if (HelperFunctions.isSpawn(structure))
+            return 1;
+        if (HelperFunctions.isExtension(structure))
+            return 2;
+        if (HelperFunctions.isTower(structure))
+            return 3;
+        if (HelperFunctions.isStorage(structure))
+            return 4;
+        return 5;
+    };
+    return targets.sort((a, b) => getPriority(a) - getPriority(b));
+}
+
+function runBuilderRole(creep) {
+    if (creep.memory.working && creep.store[RESOURCE_ENERGY] == 0) {
+        creep.memory.working = false;
+        creep.say("🔄 collect");
+    }
+    if (!creep.memory.working && creep.store.getFreeCapacity() == 0) {
+        creep.memory.working = true;
+        creep.say("⚡ build");
+    }
+    const repairSites = HelperFunctions.getRoomStructuresArray(creep.room).filter((structure) => {
+        return structure.hits < structure.hitsMax;
+    });
+    if (!creep.memory.working) {
+        getEnergy(creep);
+    }
+    if (creep.memory.working && creep.room.cSites.length > 0) {
+        runBuild(creep);
+    }
+    else if (creep.memory.working && repairSites.length > 0) {
+        //if no construction sites, look for repair sites
+        runRepair(creep, repairSites);
+    }
+    else if (creep.memory.working) {
+        // if nothing else to do, go upgrade
+        const checkController = creep.room.controller;
+        if (checkController) {
+            if (creep.upgradeController(checkController) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(checkController, { visualizePathStyle: { stroke: "#ffffff" } });
+            }
+        }
+    }
+}
+function getEnergy(creep) {
+    const storage = HelperFunctions.getRoomStructuresArray(creep.room).filter((structure) => {
+        return ((HelperFunctions.isStorage(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
+            (HelperFunctions.isContainer(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
+            (HelperFunctions.isExtension(structure) && structure.store[RESOURCE_ENERGY] > 0) ||
+            (HelperFunctions.isSpawn(structure) && structure.store[RESOURCE_ENERGY] > 200));
+    });
+    const dropped = HelperFunctions.getGreatestEnergyDrop(creep.room);
+    if (storage.length > 0) {
+        if (creep.withdraw(storage[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(storage[0], { visualizePathStyle: { stroke: "#ffaa00" } });
+        }
+    }
+    else if (dropped) {
+        if (!creep.pos.isNearTo(dropped)) {
+            creep.moveTo(dropped, { visualizePathStyle: { stroke: "#ffaa00" } });
+        }
+        else {
+            creep.pickup(dropped);
+        }
+    }
+}
+function runBuild(creep) {
+    if (creep.build(creep.room.cSites[0]) == ERR_NOT_IN_RANGE) {
+        creep.moveTo(creep.room.cSites[0], { visualizePathStyle: { stroke: "#ffffff" } });
+    }
+}
+function runRepair(creep, repairSites) {
+    if (repairSites.length > 0) {
+        if (creep.repair(repairSites[0]) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(repairSites[0], { visualizePathStyle: { stroke: "#ffffff" } });
+        }
+    }
+}
+
+function runUpgraderRole(creep) {
+    if (creep.memory.working && creep.store[RESOURCE_ENERGY] == 0) {
+        creep.memory.working = false;
+        creep.say("🔄 collect");
+    }
+    if (!creep.memory.working && creep.store.getFreeCapacity() == 0) {
+        creep.memory.working = true;
+        creep.say("⚡ upgrade");
+    }
+    if (creep.memory.working) {
+        const checkController = creep.room.controller;
+        if (checkController) {
+            if (creep.upgradeController(checkController) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(checkController, { visualizePathStyle: { stroke: "#ffffff" } });
+            }
+        }
+    }
+    else {
+        const sources = prioritizeStorageTargetsByType(creep);
+        if (sources.length > 0) {
+            if (creep.withdraw(sources[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(sources[0], { visualizePathStyle: { stroke: "#ffaa00" } });
+            }
+        }
+    }
+}
+function prioritizeStorageTargetsByType(creep) {
+    const targets = HelperFunctions.getRoomStructuresArray(creep.room).filter((structure) => {
+        return ((HelperFunctions.isExtension(structure) ||
+            HelperFunctions.isStorage(structure) ||
+            HelperFunctions.isContainer(structure) ||
+            HelperFunctions.isSpawn(structure)) &&
+            structure.store.getUsedCapacity(RESOURCE_ENERGY) > 0);
+    });
+    // Assign priority: Storage (1), Container (2), Extension (3), Spawn (4)
+    const getPriority = (structure) => {
+        if (HelperFunctions.isStorage(structure))
+            return 1;
+        if (HelperFunctions.isContainer(structure))
+            return 2;
+        if (HelperFunctions.isExtension(structure))
+            return 3;
+        if (HelperFunctions.isSpawn(structure))
+            return 4;
+        return 5;
+    };
+    return targets.sort((a, b) => getPriority(a) - getPriority(b));
+}
+
+// Factory function for creating CreepsInstance
+function createCreepsInstance(room) {
+    const creeps = getCreepsByRoom(room);
+    return {
+        room,
+        creeps,
+        harvesters: filterCreepsByRole(creeps, 'harvester'),
+        haulers: filterCreepsByRole(creeps, 'hauler'),
+        upgraders: filterCreepsByRole(creeps, 'upgrader'),
+        builders: filterCreepsByRole(creeps, 'builder'),
+        creepBodies: getDefaultCreepBodies()
+    };
+}
+// Helper functions
+function filterCreepsByRole(creeps, role) {
+    return _.filter(creeps, (creep) => creep.memory.role === role);
+}
+function getCreepsByRoom(room) {
+    return room.myCreeps;
+}
+function getDefaultCreepBodies() {
+    return {
         harvesters: [WORK, WORK, MOVE],
         haulers: [CARRY, MOVE, CARRY, MOVE],
         upgraders: [WORK, CARRY, MOVE],
         builders: [WORK, CARRY, MOVE],
-    }) {
-        this.room = room;
-        this.creeps = creeps;
-        this.harvesters = harvesters;
-        this.haulers = haulers;
-        this.upgraders = upgraders;
-        this.builders = builders;
-        this.MyCreepBodies = MyCreepBodies;
-    }
-    // make creep walk over road
-    walkOverRoad(creep) {
-        let pos = creep.pos;
-        let structure = pos.lookFor(LOOK_STRUCTURES);
-        if (structure.length > 0) {
-            if (structure[0].structureType === STRUCTURE_ROAD) {
-                creep.move(creep.pos.getDirectionTo(structure[0].pos));
-            }
+    };
+}
+// Core functional methods
+function createSpawnWorkOrder(role, body, priority, roomName, source) {
+    const name = "Initial_" + role + "-" + Game.time;
+    const sourceId = source ? source.id : undefined;
+    return {
+        name: name,
+        body: body,
+        memory: { role: role, working: false, room: roomName, assigned_source: sourceId },
+        priority: priority,
+    };
+}
+function runCreeps(creepsInstance) {
+    for (const creep of creepsInstance.creeps) {
+        if (creep.memory.role === "harvester") {
+            runHarvesterRole(creep);
         }
-    }
-    newCreep(role, body, priory, source) {
-        let name = "Initial_" + role + "-" + Game.time;
-        let sourceId = source ? source.id : undefined;
-        return {
-            name: name,
-            body: body,
-            memory: { role: role, working: false, room: this.room.name, assigned_source: sourceId },
-            priority: priory,
-        };
-    }
-    run() {
-        // Run creep logic
-        for (const creepName in this.creeps) {
-            const creep = this.creeps[creepName];
-            if (creep.memory.role === "harvester") {
-                new RoleHarvester(creep).runInitial();
-            }
-            if (creep.memory.role === "hauler") {
-                new RoleHauler(creep).run();
-            }
-            if (creep.memory.role === "upgrader") {
-                new RoleUpgrader(creep).run();
-            }
-            if (creep.memory.role === "builder") {
-                new RoleBuilder(creep).run();
-            }
+        if (creep.memory.role === "hauler") {
+            runHaulerRole(creep);
+        }
+        if (creep.memory.role === "upgrader") {
+            runUpgraderRole(creep);
+        }
+        if (creep.memory.role === "builder") {
+            runBuilderRole(creep);
         }
     }
 }
 
-class CostMatrix {
-    constructor(r, matrix = []) {
-        this.r = r;
-        this.matrix = matrix;
-        this.runMemoized();
+// Memoization function
+function memoizeCostMatrix(fn, room) {
+    if (!room.memory.roomCostMatrix) {
+        room.memory.roomCostMatrix = {};
     }
-    runMemoized() {
-        const memoizedMatrix = HelperFunctions.memoizeCostMatrix(this.calcMatrix.bind(this), this.r);
-        this.deserialize(memoizedMatrix(this.r.name));
-        // this.visualize(this.r.name, memoizedMatrix(this.r.name));
-    }
-    calcMatrix() {
-        console.log("Calculating cost matrix for room: ", this.r.name);
-        let sources = this.r.sources;
-        let structures = this.r.structures;
-        let constructionSites = this.r.cSites;
-        let creeps = this.r.myCreeps;
-        // set costs for terrain
-        for (let y = 1; y < 49; y++) {
-            for (let x = 1; x < 49; x++) {
-                let terrain = this.r.getTerrain().get(x, y);
-                if (terrain === TERRAIN_MASK_WALL) {
-                    this.set(x, y, 255);
-                }
-                else {
-                    this.set(x, y, 1);
-                }
-            }
+    return (...args) => {
+        let n = args[0];
+        if (n in room.memory.roomCostMatrix) {
+            console.log("Fetching CostMatrix from memory");
+            return room.memory.roomCostMatrix[n];
         }
-        // set costs for construction sites
-        for (let site of constructionSites) {
-            this.set(site.pos.x, site.pos.y, 255);
+        else {
+            console.log("Calculating CostMatrix for room: ", n);
+            let result = fn(n);
+            room.memory.roomCostMatrix[n] = result;
+            return result;
         }
-        for (let source of sources) {
-            this.set(source.pos.x, source.pos.y, 255);
-        }
-        Object.keys(structures).forEach((structType) => {
-            for (const struct of structures[structType]) {
-                if (struct.structureType === STRUCTURE_ROAD) {
-                    this.set(struct.pos.x, struct.pos.y, 255);
-                }
-                else if (struct.structureType === STRUCTURE_CONTAINER) {
-                    this.set(struct.pos.x, struct.pos.y, 5);
-                }
-                else if (struct.structureType === STRUCTURE_RAMPART) {
-                    this.set(struct.pos.x, struct.pos.y, 255);
-                }
-                else if (struct.structureType !== STRUCTURE_WALL) {
-                    this.set(struct.pos.x, struct.pos.y, 255);
-                }
-            }
-        });
-        for (let creep of creeps) {
-            this.set(creep.pos.x, creep.pos.y, 255);
-        }
-        return this.serialize();
-    }
-    // create visual for each position in the matrix
-    visualize(room, roomMatrix) {
-        this.deserialize(roomMatrix);
-        console.log("Visualizing cost matrix...");
-        for (let y = 0; y < 50; y++) {
-            for (let x = 0; x < 50; x++) {
-                let value = this.matrix[y * 50 + x];
-                if (value === 255) {
-                    Game.rooms[room].visual.circle(x, y, {
-                        fill: "red",
-                        radius: 0.1,
-                    });
-                }
-                else if (value === 1) {
-                    Game.rooms[room].visual.circle(x, y, {
-                        fill: "green",
-                        radius: 0.1,
-                    });
-                }
-                else if (value === 5) {
-                    Game.rooms[room].visual.circle(x, y, {
-                        fill: "blue",
-                        radius: 0.1,
-                    });
-                }
-            }
-        }
-    }
-    set(x, y, cost) {
-        this.matrix[y * 50 + x] = cost;
-    }
-    get(x, y) {
-        return this.matrix[y * 50 + x];
-    }
-    serialize() {
-        return this.matrix.join(",");
-    }
-    deserialize(str) {
-        this.matrix = str.split(",").map((v) => parseInt(v));
-    }
-    reset() {
-        console.log("Reset cost matrix for room: ", this.r.name);
-        this.matrix = [];
-        delete this.r.memory.roomCostMatrix;
-    }
+    };
 }
-
-class StructuresInstance {
-    constructor(r, roomSources, roomController = r.controller, roomCostMaxtrix = new CostMatrix(r), roomPositions = HelperFunctions.emptyBaseStructures()) {
-        this.r = r;
-        this.roomSources = roomSources;
-        this.roomController = roomController;
-        this.roomCostMaxtrix = roomCostMaxtrix;
-        this.roomPositions = roomPositions;
-        this.runMemoized();
-        this.buildRoomPositions();
-        this.createSourceStructures();
-    }
-    runMemoized() {
-        const memoizedcalcRoomPositions = HelperFunctions.memoizeRoomPositions(this.calcRoomPositions.bind(this), this.r);
-        this.roomPositions = memoizedcalcRoomPositions(this.r.name);
-        this.createVisuals();
-    }
-    checkPositionsForRect(rect) {
-        let positions = [];
-        for (let x = rect.x1; x <= rect.x2; x++) {
-            for (let y = rect.y1; y <= rect.y2; y++) {
-                if (this.roomCostMaxtrix.get(x, y) === 255 || x < 0 || x >= 50 || y < 0 || y >= 50) {
-                    return undefined;
-                }
-                else {
-                    let pos = this.r.getPositionAt(x, y);
-                    if (pos)
-                        positions.push(pos);
-                }
+// Factory function
+function createCostMatrix(room) {
+    return getMemoizedCostMatrix(room);
+}
+// Pure calculation functions
+function calculateCostMatrix(room) {
+    console.log("Calculating cost matrix for room: ", room.name);
+    let matrix = new Array(2500); // 50x50 grid
+    const sources = room.sources;
+    const structures = room.structures;
+    const constructionSites = room.cSites;
+    const creeps = room.myCreeps;
+    // Set costs for terrain
+    for (let y = 1; y < 49; y++) {
+        for (let x = 1; x < 49; x++) {
+            const terrain = room.getTerrain().get(x, y);
+            if (terrain === TERRAIN_MASK_WALL) {
+                matrix[y * 50 + x] = 255;
+            }
+            else {
+                matrix[y * 50 + x] = 1;
             }
         }
-        return positions;
     }
-    checkPosOnMatrix(x, y) {
-        if (this.roomCostMaxtrix.get(x, y) != 255) {
-            return this.r.getPositionAt(x, y);
-        }
-        return null;
+    // Set costs for construction sites
+    for (const site of constructionSites) {
+        matrix[site.pos.y * 50 + site.pos.x] = 255;
     }
-    calcRoomPositions() {
-        console.log(`Calculating room positions for ${this.r.name}`);
-        // Calculate Spawn positions
-        const initialSpawn = this.r.structures.spawn[0];
-        const initialSpawnPos = initialSpawn.pos;
-        const secondSpawnPos = this.checkPosOnMatrix(initialSpawn.pos.x - 3, initialSpawn.pos.y);
-        const thirdSpawnPos = this.checkPosOnMatrix(initialSpawn.pos.x - 6, initialSpawn.pos.y);
-        const initialX = initialSpawn.pos.x - 3;
-        const initialY = initialSpawn.pos.y;
-        if (initialSpawnPos) {
-            this.roomPositions.spawn.push({
-                x: initialSpawnPos.x,
-                y: initialSpawnPos.y,
-                built: true,
-            });
+    // Set costs for sources
+    for (const source of sources) {
+        matrix[source.pos.y * 50 + source.pos.x] = 255;
+    }
+    // Set costs for structures
+    Object.keys(structures).forEach((structType) => {
+        for (const struct of structures[structType]) {
+            if (struct.structureType === STRUCTURE_ROAD) {
+                matrix[struct.pos.y * 50 + struct.pos.x] = 255;
+            }
+            else if (struct.structureType === STRUCTURE_CONTAINER) {
+                matrix[struct.pos.y * 50 + struct.pos.x] = 5;
+            }
+            else if (struct.structureType === STRUCTURE_RAMPART) {
+                matrix[struct.pos.y * 50 + struct.pos.x] = 255;
+            }
+            else if (struct.structureType !== STRUCTURE_WALL) {
+                matrix[struct.pos.y * 50 + struct.pos.x] = 255;
+            }
         }
-        if (secondSpawnPos) {
-            this.roomPositions.spawn.push({
-                x: secondSpawnPos.x,
-                y: secondSpawnPos.y,
-                built: false,
-            });
-        }
-        if (thirdSpawnPos) {
-            this.roomPositions.spawn.push({
-                x: thirdSpawnPos.x,
-                y: thirdSpawnPos.y,
-                built: false,
-            });
-        }
-        // Calculate Storage position
-        const storagePos = this.checkPosOnMatrix(initialX, initialY - 3);
-        if (storagePos) {
-            this.roomPositions.storage.push({
-                x: storagePos.x,
-                y: storagePos.y,
-                built: false,
-            });
-        }
-        // Calculate Links positions
-        const firstLinkPos = this.checkPosOnMatrix(initialX, initialY + 3);
-        if (firstLinkPos) {
-            this.roomPositions.link.push({
-                x: firstLinkPos.x,
-                y: firstLinkPos.y,
-                built: false,
-            });
-        }
-        // Calculate Towers positions
-        const firstTowerPos = this.checkPosOnMatrix(initialX + 1, initialY + 1);
-        const secondTowerPos = this.checkPosOnMatrix(initialX - 1, initialY + 1);
-        const thirdTowerPos = this.checkPosOnMatrix(initialX + 1, initialY - 1);
-        const fourthTowerPos = this.checkPosOnMatrix(initialX - 1, initialY - 1);
-        if (firstTowerPos) {
-            this.roomPositions.tower.push({
-                x: firstTowerPos.x,
-                y: firstTowerPos.y,
-                built: false,
-            });
-        }
-        if (secondTowerPos) {
-            this.roomPositions.tower.push({
-                x: secondTowerPos.x,
-                y: secondTowerPos.y,
-                built: false,
-            });
-        }
-        if (thirdTowerPos) {
-            this.roomPositions.tower.push({
-                x: thirdTowerPos.x,
-                y: thirdTowerPos.y,
-                built: false,
-            });
-        }
-        if (fourthTowerPos) {
-            this.roomPositions.tower.push({
-                x: fourthTowerPos.x,
-                y: fourthTowerPos.y,
-                built: false,
-            });
-        }
-        // Calculate Extension positions
-        let extensionsArray = [];
-        extensionsArray.push(this.checkPosOnMatrix(initialX + 2, initialY + 1));
-        extensionsArray.push(this.checkPosOnMatrix(initialX - 2, initialY + 1));
-        extensionsArray.push(this.checkPosOnMatrix(initialX + 2, initialY - 1));
-        extensionsArray.push(this.checkPosOnMatrix(initialX - 2, initialY - 1));
-        extensionsArray.push(this.checkPosOnMatrix(initialX + 1, initialY + 2));
-        extensionsArray.push(this.checkPosOnMatrix(initialX - 1, initialY + 2));
-        extensionsArray.push(this.checkPosOnMatrix(initialX + 1, initialY - 2));
-        extensionsArray.push(this.checkPosOnMatrix(initialX - 1, initialY - 2));
-        extensionsArray.push(this.checkPosOnMatrix(initialX + 2, initialY + 2));
-        extensionsArray.push(this.checkPosOnMatrix(initialX - 2, initialY + 2));
-        extensionsArray.push(this.checkPosOnMatrix(initialX + 2, initialY - 2));
-        extensionsArray.push(this.checkPosOnMatrix(initialX - 2, initialY - 2));
-        for (const pos of extensionsArray) {
-            if (pos) {
-                this.roomPositions.extension.push({
-                    x: pos.x,
-                    y: pos.y,
-                    built: false,
+    });
+    // Set costs for creeps
+    for (const creep of creeps) {
+        matrix[creep.pos.y * 50 + creep.pos.x] = 255;
+    }
+    return {
+        matrix: Object.freeze(matrix),
+        roomName: room.name
+    };
+}
+function getCost(matrix, x, y) {
+    return matrix.matrix[y * 50 + x];
+}
+// Serialization functions
+function serializeCostMatrix(matrix) {
+    return matrix.matrix.join(",");
+}
+function deserializeCostMatrix(serialized, roomName) {
+    const matrix = serialized.split(",").map((v) => parseInt(v));
+    return {
+        matrix: Object.freeze(matrix),
+        roomName
+    };
+}
+// Memoization wrapper
+function getMemoizedCostMatrix(room) {
+    const memoizedMatrix = memoizeCostMatrix(() => serializeCostMatrix(calculateCostMatrix(room)), room);
+    return deserializeCostMatrix(memoizedMatrix(room.name), room.name);
+}
+// Visualization function
+function visualizeCostMatrix(room, matrix) {
+    console.log("Visualizing cost matrix...");
+    for (let y = 0; y < 50; y++) {
+        for (let x = 0; x < 50; x++) {
+            const value = matrix.matrix[y * 50 + x];
+            if (value === 255) {
+                Game.rooms[room.name].visual.circle(x, y, {
+                    fill: "red",
+                    radius: 0.1,
+                });
+            }
+            else if (value === 1) {
+                Game.rooms[room.name].visual.circle(x, y, {
+                    fill: "green",
+                    radius: 0.1,
+                });
+            }
+            else if (value === 5) {
+                Game.rooms[room.name].visual.circle(x, y, {
+                    fill: "blue",
+                    radius: 0.1,
                 });
             }
         }
-        // Calculate Roads positions
-        this.calcRoadsAroundStructures(this.roomPositions.spawn);
-        this.calcRoadsAroundStructures(this.roomPositions.storage);
-        this.calcRoadsAroundStructures(this.roomPositions.link);
-        return this.roomPositions;
     }
-    calcRoadsAroundStructures(structures) {
-        for (const pos of structures) {
-            let x = pos.x;
-            let y = pos.y;
-            for (let i = 1; i <= 2; i++) {
-                let roadPosArray = [];
-                roadPosArray.push(this.checkPosOnMatrix(x + i, y));
-                roadPosArray.push(this.checkPosOnMatrix(x - i, y));
-                roadPosArray.push(this.checkPosOnMatrix(x, y + i));
-                roadPosArray.push(this.checkPosOnMatrix(x, y - i));
-                for (const roadPos of roadPosArray) {
-                    if (roadPos) {
-                        this.roomPositions.road.push({
-                            x: roadPos.x,
-                            y: roadPos.y,
-                            built: false,
-                        });
-                    }
+}
+// Reset function
+function resetCostMatrix(room) {
+    console.log("Reset cost matrix for room: ", room.name);
+    delete room.memory.roomCostMatrix;
+}
+
+// Memoization function
+function memoizeRoomPositions(fn, room) {
+    if (!room.memory.roomPositions) {
+        room.memory.roomPositions = {};
+    }
+    return (...args) => {
+        let n = args[0];
+        if (n in room.memory.roomPositions) {
+            // console.log("Fetching RoomPositions from memory");
+            return room.memory.roomPositions[n];
+        }
+        else {
+            // console.log("Calculating RoomPositions for room: ", n);
+            let result = fn(n);
+            room.memory.roomPositions[n] = result;
+            return result;
+        }
+    };
+}
+// Factory function
+function createStructuresData(room, sources) {
+    const costMatrix = createCostMatrix(room);
+    visualizeCostMatrix(room, costMatrix);
+    const roomPositions = getMemoizedRoomPositions(room, costMatrix);
+    // Run side effects
+    buildRoomPositions(room, roomPositions, costMatrix);
+    createSourceStructures(room, sources, costMatrix);
+    createStructureVisuals(room, roomPositions);
+    return {
+        roomName: room.name,
+        roomPositions,
+        roomSources: Object.freeze([...sources]),
+        roomController: room.controller
+    };
+}
+// Pure calculation functions
+function calculateRoomPositions(room, costMatrix) {
+    console.log(`Calculating room positions for ${room.name}`);
+    const roomPositions = HelperFunctions.emptyBaseStructures();
+    // Calculate Spawn positions
+    const initialSpawn = room.structures.spawn[0];
+    const initialSpawnPos = initialSpawn.pos;
+    const secondSpawnPos = checkPosOnMatrix(costMatrix, room, initialSpawn.pos.x - 3, initialSpawn.pos.y);
+    const thirdSpawnPos = checkPosOnMatrix(costMatrix, room, initialSpawn.pos.x - 6, initialSpawn.pos.y);
+    const initialX = initialSpawn.pos.x - 3;
+    const initialY = initialSpawn.pos.y;
+    if (initialSpawnPos) {
+        roomPositions.spawn.push({
+            x: initialSpawnPos.x,
+            y: initialSpawnPos.y,
+            built: true,
+        });
+    }
+    if (secondSpawnPos) {
+        roomPositions.spawn.push({
+            x: secondSpawnPos.x,
+            y: secondSpawnPos.y,
+            built: false,
+        });
+    }
+    if (thirdSpawnPos) {
+        roomPositions.spawn.push({
+            x: thirdSpawnPos.x,
+            y: thirdSpawnPos.y,
+            built: false,
+        });
+    }
+    // Calculate Storage position
+    const storagePos = checkPosOnMatrix(costMatrix, room, initialX, initialY - 3);
+    if (storagePos) {
+        roomPositions.storage.push({
+            x: storagePos.x,
+            y: storagePos.y,
+            built: false,
+        });
+    }
+    // Calculate Links positions
+    const firstLinkPos = checkPosOnMatrix(costMatrix, room, initialX, initialY + 3);
+    if (firstLinkPos) {
+        roomPositions.link.push({
+            x: firstLinkPos.x,
+            y: firstLinkPos.y,
+            built: false,
+        });
+    }
+    // Calculate Towers positions
+    const firstTowerPos = checkPosOnMatrix(costMatrix, room, initialX + 1, initialY + 1);
+    const secondTowerPos = checkPosOnMatrix(costMatrix, room, initialX - 1, initialY + 1);
+    const thirdTowerPos = checkPosOnMatrix(costMatrix, room, initialX + 1, initialY - 1);
+    const fourthTowerPos = checkPosOnMatrix(costMatrix, room, initialX - 1, initialY - 1);
+    if (firstTowerPos) {
+        roomPositions.tower.push({
+            x: firstTowerPos.x,
+            y: firstTowerPos.y,
+            built: false,
+        });
+    }
+    if (secondTowerPos) {
+        roomPositions.tower.push({
+            x: secondTowerPos.x,
+            y: secondTowerPos.y,
+            built: false,
+        });
+    }
+    if (thirdTowerPos) {
+        roomPositions.tower.push({
+            x: thirdTowerPos.x,
+            y: thirdTowerPos.y,
+            built: false,
+        });
+    }
+    if (fourthTowerPos) {
+        roomPositions.tower.push({
+            x: fourthTowerPos.x,
+            y: fourthTowerPos.y,
+            built: false,
+        });
+    }
+    // Calculate Extension positions
+    const extensionsArray = [];
+    extensionsArray.push(checkPosOnMatrix(costMatrix, room, initialX + 2, initialY + 1));
+    extensionsArray.push(checkPosOnMatrix(costMatrix, room, initialX - 2, initialY + 1));
+    extensionsArray.push(checkPosOnMatrix(costMatrix, room, initialX + 2, initialY - 1));
+    extensionsArray.push(checkPosOnMatrix(costMatrix, room, initialX - 2, initialY - 1));
+    extensionsArray.push(checkPosOnMatrix(costMatrix, room, initialX + 1, initialY + 2));
+    extensionsArray.push(checkPosOnMatrix(costMatrix, room, initialX - 1, initialY + 2));
+    extensionsArray.push(checkPosOnMatrix(costMatrix, room, initialX + 1, initialY - 2));
+    extensionsArray.push(checkPosOnMatrix(costMatrix, room, initialX - 1, initialY - 2));
+    extensionsArray.push(checkPosOnMatrix(costMatrix, room, initialX + 2, initialY + 2));
+    extensionsArray.push(checkPosOnMatrix(costMatrix, room, initialX - 2, initialY + 2));
+    extensionsArray.push(checkPosOnMatrix(costMatrix, room, initialX + 2, initialY - 2));
+    extensionsArray.push(checkPosOnMatrix(costMatrix, room, initialX - 2, initialY - 2));
+    for (const pos of extensionsArray) {
+        if (pos) {
+            roomPositions.extension.push({
+                x: pos.x,
+                y: pos.y,
+                built: false,
+            });
+        }
+    }
+    // Calculate Roads positions
+    const roadsFromSpawn = calculateRoadsAroundStructures(roomPositions.spawn, costMatrix, room);
+    const roadsFromStorage = calculateRoadsAroundStructures(roomPositions.storage, costMatrix, room);
+    const roadsFromLink = calculateRoadsAroundStructures(roomPositions.link, costMatrix, room);
+    roomPositions.road.push(...roadsFromSpawn, ...roadsFromStorage, ...roadsFromLink);
+    return roomPositions;
+}
+function checkPosOnMatrix(costMatrix, room, x, y) {
+    if (getCost(costMatrix, x, y) !== 255) {
+        return room.getPositionAt(x, y);
+    }
+    return null;
+}
+function calculateRoadsAroundStructures(structures, costMatrix, room) {
+    const roads = [];
+    for (const pos of structures) {
+        const x = pos.x;
+        const y = pos.y;
+        for (let i = 1; i <= 2; i++) {
+            const roadPositions = [
+                { x: x + i, y: y },
+                { x: x - i, y: y },
+                { x: x, y: y + i },
+                { x: x, y: y - i }
+            ];
+            for (const roadPos of roadPositions) {
+                const validPos = checkPosOnMatrix(costMatrix, room, roadPos.x, roadPos.y);
+                if (validPos) {
+                    roads.push({
+                        x: roadPos.x,
+                        y: roadPos.y,
+                        built: false,
+                    });
                 }
             }
         }
     }
-    // Create visuals for roomPostiions
-    createVisuals() {
-        for (const pos of this.roomPositions.spawn) {
-            this.r.visual.text("Spawn", pos.x, pos.y, {
-                color: "#ff0000",
-                font: 0.5,
-            });
-        }
-        for (const pos of this.roomPositions.storage) {
-            this.r.visual.text("Storage", pos.x, pos.y, {
-                color: "#ff0000",
-                font: 0.5,
-            });
-        }
-        for (const pos of this.roomPositions.link) {
-            this.r.visual.text("Link", pos.x, pos.y, {
-                color: "#ff0000",
-                font: 0.5,
-            });
-        }
-        for (const pos of this.roomPositions.tower) {
-            this.r.visual.text("Tower", pos.x, pos.y, {
-                color: "#ff0000",
-                font: 0.5,
-            });
-        }
-        for (const pos of this.roomPositions.road) {
-            Game.rooms[this.r.name].visual.circle(pos.x, pos.y, {
-                fill: "blue",
-                radius: 0.1,
-            });
-        }
-        for (const pos of this.roomPositions.extension) {
-            Game.rooms[this.r.name].visual.circle(pos.x, pos.y, {
-                fill: "yellow",
-                radius: 0.1,
-            });
-        }
+    return roads;
+}
+// Construction functions
+function createConstructionSite(room, costMatrix, x, y, structureType) {
+    if (getCost(costMatrix, x, y) !== 255) {
+        const result = room.createConstructionSite(x, y, structureType);
+        return result === OK;
     }
-    createExtensions() {
-        if (this.roomController && this.roomController.level > 1) {
-            let extensionCount = CONTROLLER_STRUCTURES.extension[this.roomController.level];
-            let extensionsToBuild = this.r.find(FIND_CONSTRUCTION_SITES, {
-                filter: (structure) => structure.structureType === STRUCTURE_EXTENSION,
-            });
-            let builtExtensions = this.r.find(FIND_MY_STRUCTURES, {
-                filter: (structure) => structure.structureType === STRUCTURE_EXTENSION,
-            });
-            let allExtensions = builtExtensions.length + extensionsToBuild.length;
-            if (allExtensions < extensionCount) {
-                let mainSpawn = this.r.find(FIND_MY_SPAWNS)[0];
-                let initialPos = this.r.getPositionAt(mainSpawn.pos.x, mainSpawn.pos.y + 1);
-                if (allExtensions < 1 && initialPos) {
-                    this.r.createConstructionSite(initialPos, STRUCTURE_EXTENSION);
-                }
-                for (let i = allExtensions - 1; i < extensionCount; i++) {
-                    if (i % 2 === 0) {
-                        let targetPos = this.r.getPositionAt(extensionsToBuild[i].pos.x - 1, extensionsToBuild[i].pos.y);
-                        if (targetPos) {
-                            this.r.createConstructionSite(targetPos, STRUCTURE_EXTENSION);
-                        }
+    else {
+        console.log(`CostMatrix error: failed to build ${structureType} at ${x},${y}`);
+        return false;
+    }
+}
+function shouldBuildStructures(roomPositions) {
+    return Object.keys(roomPositions).some((struct) => {
+        return roomPositions[struct].some(pos => !pos.built);
+    });
+}
+// Source-specific functions
+function createSourceStructures(room, sources, costMatrix) {
+    if (room.controller && room.controller.level > 1) {
+        const spawn = room.structures.spawn[0];
+        const initialPos = room.getPositionAt(spawn.pos.x, spawn.pos.y);
+        for (const source of sources) {
+            if (!room.memory.sourcesMapped) {
+                room.memory.sourcesMapped = [];
+            }
+            if (room.memory.sourcesMapped.indexOf(source.id) === -1 && initialPos) {
+                const path = room.findPath(initialPos, source.pos, {
+                    maxOps: 100,
+                    ignoreCreeps: true,
+                    ignoreDestructibleStructures: true,
+                    swampCost: 1,
+                });
+                if (path.length > 0) {
+                    for (let i = 0; i < path.length - 2; i++) {
+                        createConstructionSite(room, costMatrix, path[i].x, path[i].y, STRUCTURE_ROAD);
                     }
-                    else {
-                        let targetPos = this.r.getPositionAt(extensionsToBuild[i].pos.x, extensionsToBuild[i].pos.y - 1);
-                        if (targetPos) {
-                            this.r.createConstructionSite(targetPos, STRUCTURE_EXTENSION);
-                        }
-                    }
                 }
+                const containerPos = room.getPositionAt(path[path.length - 2].x, path[path.length - 2].y);
+                if (containerPos) {
+                    createConstructionSite(room, costMatrix, containerPos.x, containerPos.y, STRUCTURE_CONTAINER);
+                }
+                room.memory.sourcesMapped.push(source.id);
+                // Find creep assigned to source
+                const creeps = room.myCreeps.filter((creep) => creep.memory.assigned_source === source.id);
+                // Assign container pos to creep memory
+                if (creeps.length > 0 && containerPos) {
+                    creeps[0].memory.container_pos = containerPos;
+                    if (!room.memory.source_containers[source.id]) {
+                        room.memory.source_containers[source.id] = [];
+                    }
+                    room.memory.source_containers[source.id].push(containerPos);
+                }
+                resetCostMatrix(room);
             }
         }
     }
-    structsToBuild() {
-        let failedStructures = false;
-        Object.keys(this.roomPositions).forEach((struct) => {
-            for (const pos of this.roomPositions[struct]) {
-                if (!pos.built) {
-                    failedStructures = true;
-                    break;
+}
+// Memoization wrapper
+function getMemoizedRoomPositions(room, costMatrix) {
+    const memoizedcalcRoomPositions = memoizeRoomPositions(() => calculateRoomPositions(room, costMatrix), room);
+    return memoizedcalcRoomPositions(room.name);
+}
+// Visual functions
+function createStructureVisuals(room, roomPositions) {
+    for (const pos of roomPositions.spawn) {
+        room.visual.text("Spawn", pos.x, pos.y, {
+            color: "#ff0000",
+            font: 0.5,
+        });
+    }
+    for (const pos of roomPositions.storage) {
+        room.visual.text("Storage", pos.x, pos.y, {
+            color: "#ff0000",
+            font: 0.5,
+        });
+    }
+    for (const pos of roomPositions.link) {
+        room.visual.text("Link", pos.x, pos.y, {
+            color: "#ff0000",
+            font: 0.5,
+        });
+    }
+    for (const pos of roomPositions.tower) {
+        room.visual.text("Tower", pos.x, pos.y, {
+            color: "#ff0000",
+            font: 0.5,
+        });
+    }
+    for (const pos of roomPositions.road) {
+        Game.rooms[room.name].visual.circle(pos.x, pos.y, {
+            fill: "blue",
+            radius: 0.1,
+        });
+    }
+    for (const pos of roomPositions.extension) {
+        Game.rooms[room.name].visual.circle(pos.x, pos.y, {
+            fill: "yellow",
+            radius: 0.1,
+        });
+    }
+}
+// Side effect functions
+function buildRoomPositions(room, roomPositions, costMatrix) {
+    if (room.controller &&
+        room.controller.level > 1 &&
+        shouldBuildStructures(roomPositions) &&
+        Game.time % 100 === 0) {
+        Object.keys(roomPositions).forEach((struct) => {
+            for (const pos of roomPositions[struct]) {
+                if (pos.built === false) {
+                    pos.built = createConstructionSite(room, costMatrix, pos.x, pos.y, struct);
                 }
             }
         });
-        return failedStructures;
-    }
-    // Build structures in room positions
-    buildRoomPositions() {
-        //let cpu = Game.cpu.getUsed();
-        if (this.roomController &&
-            this.roomController.level > 1 &&
-            this.structsToBuild() &&
-            Game.time % 100 === 0) {
-            Object.keys(this.roomPositions).forEach((struct) => {
-                for (const pos of this.roomPositions[struct]) {
-                    if (pos.built === false) {
-                        pos.built = this.matrixedCSite(pos.x, pos.y, struct);
-                    }
-                }
-            });
-        }
-        // reset roomPositions and CostMatrix
-        // this.roomCostMaxtrix.reset();
-        // this.reset();
-        //cpu = Game.cpu.getUsed() - cpu;
-        //console.log("Needed", cpu, " cpu time");
-    }
-    matrixedCSite(x, y, structureType) {
-        let returnValue = false;
-        if (this.roomCostMaxtrix.get(x, y) != 255) {
-            let result = this.r.createConstructionSite(x, y, structureType);
-            if (result === OK) {
-                returnValue = true;
-            }
-        }
-        else {
-            console.log(`CostMatrix error: failed to build ${structureType} at ${x},${y}`);
-        }
-        return returnValue;
-    }
-    createSourceStructures() {
-        if (this.roomController && this.roomController.level > 1) {
-            let spawn = this.r.structures.spawn[0];
-            let initialPos = this.r.getPositionAt(spawn.pos.x, spawn.pos.y);
-            let sources = this.roomSources;
-            for (let source of sources) {
-                if (!this.r.memory.sourcesMapped) {
-                    this.r.memory.sourcesMapped = [];
-                }
-                if (this.r.memory.sourcesMapped.indexOf(source.id) === -1 && initialPos) {
-                    let path = this.r.findPath(initialPos, source.pos, {
-                        maxOps: 100,
-                        ignoreCreeps: true,
-                        ignoreDestructibleStructures: true,
-                        swampCost: 1,
-                    });
-                    if (path.length > 0) {
-                        for (let i = 0; i < path.length - 2; i++) {
-                            this.matrixedCSite(path[i].x, path[i].y, STRUCTURE_ROAD);
-                        }
-                    }
-                    let containerPos = this.r.getPositionAt(path[path.length - 2].x, path[path.length - 2].y);
-                    if (containerPos)
-                        this.matrixedCSite(containerPos.x, containerPos.y, STRUCTURE_CONTAINER);
-                    this.r.memory.sourcesMapped.push(source.id);
-                    //find creep assigned to source
-                    let creeps = this.r.myCreeps.filter((creep) => creep.memory.assigned_source === source.id);
-                    //assign container pos to creep memory
-                    if (creeps.length > 0 && containerPos) {
-                        creeps[0].memory.container_pos = containerPos;
-                        this.r.memory.source_containers[source.id].push(containerPos);
-                    }
-                    this.roomCostMaxtrix.reset();
-                }
-            }
-        }
-    }
-    reset() {
-        console.log("Reset roomPositions for room: ", this.r.name);
-        this.roomPositions = HelperFunctions.emptyBaseStructures();
-        delete this.r.memory.roomPositions;
     }
 }
 
 function createRoomInstance(room) {
+    const sources = room.sources.filter((source) => !HelperFunctions.isHostileNearby(source));
     return {
         room,
         roomController: room.controller,
         roomSpawner: createSpawnerInstance(room),
-        roomSources: room.sources.filter((source) => !HelperFunctions.isHostileNearby(source)),
-        roomStructuresInstance: new StructuresInstance(room, room.sources.filter((source) => !HelperFunctions.isHostileNearby(source))),
-        roomCreeps: new CreepsInstance(room)
+        roomSources: sources,
+        roomStructuresData: createStructuresData(room, sources),
+        roomCreeps: createCreepsInstance(room)
     };
 }
 function runSafeMode(roomInstance) {
@@ -4266,26 +4156,26 @@ function spawnHarvesters(roomInstance) {
     const { roomController, roomCreeps, roomSpawner, roomSources } = roomInstance;
     if (roomController && roomCreeps.harvesters.length < roomSources.length) {
         let targetSource = findAvailableSources(roomInstance, roomCreeps.harvesters)[0];
-        spawnQueueAdd(roomSpawner, roomCreeps.newCreep("harvester", roomCreeps.MyCreepBodies.harvesters, roomCreeps.harvesters.length < 2 ? 10 : 21, targetSource));
+        spawnQueueAdd(roomSpawner, createSpawnWorkOrder("harvester", roomCreeps.creepBodies.harvesters, roomCreeps.harvesters.length < 2 ? 10 : 21, roomInstance.room.name, targetSource));
     }
 }
 function spawnHaulers(roomInstance) {
     const { roomController, roomCreeps, roomSpawner } = roomInstance;
     if (roomController && roomCreeps.haulers.length < roomCreeps.harvesters.length) {
         let targetSource = findAvailableSources(roomInstance, roomCreeps.haulers)[0];
-        spawnQueueAdd(roomSpawner, roomCreeps.newCreep("hauler", roomCreeps.MyCreepBodies.haulers, roomCreeps.harvesters.length < 2 ? 9 : 10, targetSource));
+        spawnQueueAdd(roomSpawner, createSpawnWorkOrder("hauler", roomCreeps.creepBodies.haulers, roomCreeps.harvesters.length < 2 ? 9 : 10, roomInstance.room.name, targetSource));
     }
 }
 function spawnUpgraders(roomInstance) {
     const { roomController, roomCreeps, roomSpawner } = roomInstance;
     if (roomController && roomCreeps.upgraders.length < 3) {
-        spawnQueueAdd(roomSpawner, roomCreeps.newCreep("upgrader", roomCreeps.MyCreepBodies.upgraders, 20));
+        spawnQueueAdd(roomSpawner, createSpawnWorkOrder("upgrader", roomCreeps.creepBodies.upgraders, 20, roomInstance.room.name));
     }
 }
 function spawnBuilders(roomInstance) {
     const { roomController, roomCreeps, roomSpawner } = roomInstance;
     if (roomController && roomCreeps.builders.length < 1 && roomController.level > 1) {
-        spawnQueueAdd(roomSpawner, roomCreeps.newCreep("builder", roomCreeps.MyCreepBodies.builders, roomCreeps.builders.length < 1 ? 10 : 21));
+        spawnQueueAdd(roomSpawner, createSpawnWorkOrder("builder", roomCreeps.creepBodies.builders, roomCreeps.builders.length < 1 ? 10 : 21, roomInstance.room.name));
     }
 }
 function runSpawnLogic(roomInstance) {
@@ -4297,7 +4187,7 @@ function runSpawnLogic(roomInstance) {
 function runRoom(roomInstance) {
     runSafeMode(roomInstance);
     runSpawnLogic(roomInstance);
-    roomInstance.roomCreeps.run();
+    runCreeps(roomInstance.roomCreeps);
     runSpawner(roomInstance.roomSpawner);
 }
 

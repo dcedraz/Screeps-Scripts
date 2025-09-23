@@ -1,110 +1,156 @@
 import { HelperFunctions } from "./HelperFunctions";
 
-export class CostMatrix {
-  constructor(public r: Room, public matrix: number[] = []) {
-    this.runMemoized();
+// Core data structure
+export interface CostMatrixData {
+  readonly matrix: ReadonlyArray<number>;
+  readonly roomName: string;
+}
+
+// Memoization function
+export function memoizeCostMatrix(fn: any, room: Room) {
+  if (!room.memory.roomCostMatrix) {
+    room.memory.roomCostMatrix = {};
   }
-
-  runMemoized(): void {
-    const memoizedMatrix = HelperFunctions.memoizeCostMatrix(this.calcMatrix.bind(this), this.r);
-    this.deserialize(memoizedMatrix(this.r.name));
-    // this.visualize(this.r.name, memoizedMatrix(this.r.name));
-  }
-
-  calcMatrix(): string {
-    console.log("Calculating cost matrix for room: ", this.r.name);
-    let sources = this.r.sources;
-    let structures = this.r.structures;
-    let constructionSites = this.r.cSites;
-    let creeps = this.r.myCreeps;
-
-    // set costs for terrain
-    for (let y = 1; y < 49; y++) {
-      for (let x = 1; x < 49; x++) {
-        let terrain = this.r.getTerrain().get(x, y);
-        if (terrain === TERRAIN_MASK_WALL) {
-          this.set(x, y, 255);
-        } else {
-          this.set(x, y, 1);
-        }
-      }
+  return (...args: any[]) => {
+    let n = args[0];
+    if (n in room.memory.roomCostMatrix) {
+      // console.log("Fetching CostMatrix from memory");
+      return room.memory.roomCostMatrix[n];
+    } else {
+      console.log("Calculating CostMatrix for room: ", n);
+      let result = fn(n);
+      room.memory.roomCostMatrix[n] = result;
+      return result;
     }
+  };
+}
 
-    // set costs for construction sites
-    for (let site of constructionSites) {
-      this.set(site.pos.x, site.pos.y, 255);
-    }
+// Factory function
+export function createCostMatrix(room: Room): CostMatrixData {
+  return getMemoizedCostMatrix(room);
+}
 
-    for (let source of sources) {
-      this.set(source.pos.x, source.pos.y, 255);
-    }
+// Pure calculation functions
+export function calculateCostMatrix(room: Room): CostMatrixData {
+  console.log("Calculating cost matrix for room: ", room.name);
+  
+  let matrix: number[] = new Array(2500); // 50x50 grid
+  const sources = room.sources;
+  const structures = room.structures;
+  const constructionSites = room.cSites;
+  const creeps = room.myCreeps;
 
-    Object.keys(structures).forEach((structType) => {
-      for (const struct of structures[structType as keyof typeof structures]) {
-        if (struct.structureType === STRUCTURE_ROAD) {
-          this.set(struct.pos.x, struct.pos.y, 255);
-        } else if (struct.structureType === STRUCTURE_CONTAINER) {
-          this.set(struct.pos.x, struct.pos.y, 5);
-        } else if (struct.structureType === STRUCTURE_RAMPART) {
-          this.set(struct.pos.x, struct.pos.y, 255);
-        } else if (struct.structureType !== STRUCTURE_WALL) {
-          this.set(struct.pos.x, struct.pos.y, 255);
-        }
-      }
-    });
-
-    for (let creep of creeps) {
-      this.set(creep.pos.x, creep.pos.y, 255);
-    }
-    return this.serialize();
-  }
-
-  // create visual for each position in the matrix
-  public visualize(room: string, roomMatrix: string): void {
-    this.deserialize(roomMatrix);
-    console.log("Visualizing cost matrix...");
-    for (let y = 0; y < 50; y++) {
-      for (let x = 0; x < 50; x++) {
-        let value = this.matrix[y * 50 + x];
-        if (value === 255) {
-          Game.rooms[room].visual.circle(x, y, {
-            fill: "red",
-            radius: 0.1,
-          });
-        } else if (value === 1) {
-          Game.rooms[room].visual.circle(x, y, {
-            fill: "green",
-            radius: 0.1,
-          });
-        } else if (value === 5) {
-          Game.rooms[room].visual.circle(x, y, {
-            fill: "blue",
-            radius: 0.1,
-          });
-        }
+  // Set costs for terrain
+  for (let y = 1; y < 49; y++) {
+    for (let x = 1; x < 49; x++) {
+      const terrain = room.getTerrain().get(x, y);
+      if (terrain === TERRAIN_MASK_WALL) {
+        matrix[y * 50 + x] = 255;
+      } else {
+        matrix[y * 50 + x] = 1;
       }
     }
   }
 
-  set(x: number, y: number, cost: number): void {
-    this.matrix[y * 50 + x] = cost;
+  // Set costs for construction sites
+  for (const site of constructionSites) {
+    matrix[site.pos.y * 50 + site.pos.x] = 255;
   }
 
-  get(x: number, y: number): number {
-    return this.matrix[y * 50 + x];
+  // Set costs for sources
+  for (const source of sources) {
+    matrix[source.pos.y * 50 + source.pos.x] = 255;
   }
 
-  serialize(): string {
-    return this.matrix.join(",");
+  // Set costs for structures
+  Object.keys(structures).forEach((structType) => {
+    for (const struct of structures[structType as keyof typeof structures]) {
+      if (struct.structureType === STRUCTURE_ROAD) {
+        matrix[struct.pos.y * 50 + struct.pos.x] = 255;
+      } else if (struct.structureType === STRUCTURE_CONTAINER) {
+        matrix[struct.pos.y * 50 + struct.pos.x] = 5;
+      } else if (struct.structureType === STRUCTURE_RAMPART) {
+        matrix[struct.pos.y * 50 + struct.pos.x] = 255;
+      } else if (struct.structureType !== STRUCTURE_WALL) {
+        matrix[struct.pos.y * 50 + struct.pos.x] = 255;
+      }
+    }
+  });
+
+  // Set costs for creeps
+  for (const creep of creeps) {
+    matrix[creep.pos.y * 50 + creep.pos.x] = 255;
   }
 
-  deserialize(str: string): void {
-    this.matrix = str.split(",").map((v) => parseInt(v));
-  }
+  return {
+    matrix: Object.freeze(matrix),
+    roomName: room.name
+  };
+}
 
-  reset(): void {
-    console.log("Reset cost matrix for room: ", this.r.name);
-    this.matrix = [];
-    delete this.r.memory.roomCostMatrix;
+export function getCost(matrix: CostMatrixData, x: number, y: number): number {
+  return matrix.matrix[y * 50 + x];
+}
+
+export function setCost(matrix: CostMatrixData, x: number, y: number, cost: number): CostMatrixData {
+  const newMatrix = [...matrix.matrix];
+  newMatrix[y * 50 + x] = cost;
+  return {
+    matrix: Object.freeze(newMatrix),
+    roomName: matrix.roomName
+  };
+}
+
+// Serialization functions
+export function serializeCostMatrix(matrix: CostMatrixData): string {
+  return matrix.matrix.join(",");
+}
+
+export function deserializeCostMatrix(serialized: string, roomName: string): CostMatrixData {
+  const matrix = serialized.split(",").map((v) => parseInt(v));
+  return {
+    matrix: Object.freeze(matrix),
+    roomName
+  };
+}
+
+// Memoization wrapper
+export function getMemoizedCostMatrix(room: Room): CostMatrixData {
+  const memoizedMatrix = memoizeCostMatrix(
+    () => serializeCostMatrix(calculateCostMatrix(room)),
+    room
+  );
+  return deserializeCostMatrix(memoizedMatrix(room.name), room.name);
+}
+
+// Visualization function
+export function visualizeCostMatrix(room: Room, matrix: CostMatrixData): void {
+  console.log("Visualizing cost matrix...");
+  for (let y = 0; y < 50; y++) {
+    for (let x = 0; x < 50; x++) {
+      const value = matrix.matrix[y * 50 + x];
+      if (value === 255) {
+        Game.rooms[room.name].visual.circle(x, y, {
+          fill: "red",
+          radius: 0.1,
+        });
+      } else if (value === 1) {
+        Game.rooms[room.name].visual.circle(x, y, {
+          fill: "green",
+          radius: 0.1,
+        });
+      } else if (value === 5) {
+        Game.rooms[room.name].visual.circle(x, y, {
+          fill: "blue",
+          radius: 0.1,
+        });
+      }
+    }
   }
+}
+
+// Reset function
+export function resetCostMatrix(room: Room): void {
+  console.log("Reset cost matrix for room: ", room.name);
+  delete room.memory.roomCostMatrix;
 }
