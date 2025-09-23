@@ -1,4 +1,4 @@
-import { CostMatrixData, createCostMatrix, getCost, resetCostMatrix } from "utils/CostMatrix";
+import { CostMatrixData, createCostMatrix, getCost, resetCostMatrix, visualizeCostMatrix } from "utils/CostMatrix";
 import { HelperFunctions } from "utils/HelperFunctions";
 
 // Core data structure
@@ -31,6 +31,7 @@ export function memoizeRoomPositions(fn: any, room: Room) {
 // Factory function
 export function createStructuresData(room: Room, sources: Source[]): StructuresData {
   const costMatrix = createCostMatrix(room);
+  // visualizeCostMatrix(room, costMatrix); Uncomment to visualize CostMatrix
   const roomPositions = getMemoizedRoomPositions(room, costMatrix);
   
   // Run side effects

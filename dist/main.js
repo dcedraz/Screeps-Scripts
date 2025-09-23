@@ -3316,42 +3316,6 @@ class HelperFunctions {
 HelperFunctions.findCarryPartsRequired = function (distance, income) {
     return (distance * 2 * income) / CARRY_CAPACITY;
 };
-HelperFunctions.memoizeCostMatrix = (fn, r) => {
-    if (!r.memory.roomCostMatrix) {
-        r.memory.roomCostMatrix = {};
-    }
-    return (...args) => {
-        let n = args[0];
-        if (n in r.memory.roomCostMatrix) {
-            //console.log("Fetching CostMatrix from memory");
-            return r.memory.roomCostMatrix[n];
-        }
-        else {
-            //console.log("Calculating CostMatrix for room: ", n);
-            let result = fn(n);
-            r.memory.roomCostMatrix[n] = result;
-            return result;
-        }
-    };
-};
-HelperFunctions.memoizeRoomPositions = (fn, r) => {
-    if (!r.memory.roomPositions) {
-        r.memory.roomPositions = {};
-    }
-    return (...args) => {
-        let n = args[0];
-        if (n in r.memory.roomPositions) {
-            // console.log("Fetching RoomPositions from memory");
-            return r.memory.roomPositions[n];
-        }
-        else {
-            // console.log("Calculating RoomPositions for room: ", n);
-            let result = fn(n);
-            r.memory.roomPositions[n] = result;
-            return result;
-        }
-    };
-};
 
 function createSpawnerInstance(room, spawns = room.structures.spawn, spawnQueue = []) {
     return {
@@ -3739,6 +3703,25 @@ function runCreeps(creepsInstance) {
     }
 }
 
+// Memoization function
+function memoizeCostMatrix(fn, room) {
+    if (!room.memory.roomCostMatrix) {
+        room.memory.roomCostMatrix = {};
+    }
+    return (...args) => {
+        let n = args[0];
+        if (n in room.memory.roomCostMatrix) {
+            console.log("Fetching CostMatrix from memory");
+            return room.memory.roomCostMatrix[n];
+        }
+        else {
+            console.log("Calculating CostMatrix for room: ", n);
+            let result = fn(n);
+            room.memory.roomCostMatrix[n] = result;
+            return result;
+        }
+    };
+}
 // Factory function
 function createCostMatrix(room) {
     return getMemoizedCostMatrix(room);
@@ -3813,8 +3796,35 @@ function deserializeCostMatrix(serialized, roomName) {
 }
 // Memoization wrapper
 function getMemoizedCostMatrix(room) {
-    const memoizedMatrix = HelperFunctions.memoizeCostMatrix(() => serializeCostMatrix(calculateCostMatrix(room)), room);
+    const memoizedMatrix = memoizeCostMatrix(() => serializeCostMatrix(calculateCostMatrix(room)), room);
     return deserializeCostMatrix(memoizedMatrix(room.name), room.name);
+}
+// Visualization function
+function visualizeCostMatrix(room, matrix) {
+    console.log("Visualizing cost matrix...");
+    for (let y = 0; y < 50; y++) {
+        for (let x = 0; x < 50; x++) {
+            const value = matrix.matrix[y * 50 + x];
+            if (value === 255) {
+                Game.rooms[room.name].visual.circle(x, y, {
+                    fill: "red",
+                    radius: 0.1,
+                });
+            }
+            else if (value === 1) {
+                Game.rooms[room.name].visual.circle(x, y, {
+                    fill: "green",
+                    radius: 0.1,
+                });
+            }
+            else if (value === 5) {
+                Game.rooms[room.name].visual.circle(x, y, {
+                    fill: "blue",
+                    radius: 0.1,
+                });
+            }
+        }
+    }
 }
 // Reset function
 function resetCostMatrix(room) {
@@ -3822,9 +3832,29 @@ function resetCostMatrix(room) {
     delete room.memory.roomCostMatrix;
 }
 
+// Memoization function
+function memoizeRoomPositions(fn, room) {
+    if (!room.memory.roomPositions) {
+        room.memory.roomPositions = {};
+    }
+    return (...args) => {
+        let n = args[0];
+        if (n in room.memory.roomPositions) {
+            // console.log("Fetching RoomPositions from memory");
+            return room.memory.roomPositions[n];
+        }
+        else {
+            // console.log("Calculating RoomPositions for room: ", n);
+            let result = fn(n);
+            room.memory.roomPositions[n] = result;
+            return result;
+        }
+    };
+}
 // Factory function
 function createStructuresData(room, sources) {
     const costMatrix = createCostMatrix(room);
+    visualizeCostMatrix(room, costMatrix);
     const roomPositions = getMemoizedRoomPositions(room, costMatrix);
     // Run side effects
     buildRoomPositions(room, roomPositions, costMatrix);
@@ -3944,9 +3974,9 @@ function calculateRoomPositions(room, costMatrix) {
         }
     }
     // Calculate Roads positions
-    const roadsFromSpawn = calculateRoadsAroundStructures(roomPositions.spawn);
-    const roadsFromStorage = calculateRoadsAroundStructures(roomPositions.storage);
-    const roadsFromLink = calculateRoadsAroundStructures(roomPositions.link);
+    const roadsFromSpawn = calculateRoadsAroundStructures(roomPositions.spawn, costMatrix, room);
+    const roadsFromStorage = calculateRoadsAroundStructures(roomPositions.storage, costMatrix, room);
+    const roadsFromLink = calculateRoadsAroundStructures(roomPositions.link, costMatrix, room);
     roomPositions.road.push(...roadsFromSpawn, ...roadsFromStorage, ...roadsFromLink);
     return roomPositions;
 }
@@ -3956,7 +3986,7 @@ function checkPosOnMatrix(costMatrix, room, x, y) {
     }
     return null;
 }
-function calculateRoadsAroundStructures(structures) {
+function calculateRoadsAroundStructures(structures, costMatrix, room) {
     const roads = [];
     for (const pos of structures) {
         const x = pos.x;
@@ -3969,11 +3999,14 @@ function calculateRoadsAroundStructures(structures) {
                 { x: x, y: y - i }
             ];
             for (const roadPos of roadPositions) {
-                roads.push({
-                    x: roadPos.x,
-                    y: roadPos.y,
-                    built: false,
-                });
+                const validPos = checkPosOnMatrix(costMatrix, room, roadPos.x, roadPos.y);
+                if (validPos) {
+                    roads.push({
+                        x: roadPos.x,
+                        y: roadPos.y,
+                        built: false,
+                    });
+                }
             }
         }
     }
@@ -4038,7 +4071,7 @@ function createSourceStructures(room, sources, costMatrix) {
 }
 // Memoization wrapper
 function getMemoizedRoomPositions(room, costMatrix) {
-    const memoizedcalcRoomPositions = HelperFunctions.memoizeRoomPositions(() => calculateRoomPositions(room, costMatrix), room);
+    const memoizedcalcRoomPositions = memoizeRoomPositions(() => calculateRoomPositions(room, costMatrix), room);
     return memoizedcalcRoomPositions(room.name);
 }
 // Visual functions

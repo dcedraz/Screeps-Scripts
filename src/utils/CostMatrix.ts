@@ -14,10 +14,10 @@ export function memoizeCostMatrix(fn: any, room: Room) {
   return (...args: any[]) => {
     let n = args[0];
     if (n in room.memory.roomCostMatrix) {
-      //console.log("Fetching CostMatrix from memory");
+      // console.log("Fetching CostMatrix from memory");
       return room.memory.roomCostMatrix[n];
     } else {
-      //console.log("Calculating CostMatrix for room: ", n);
+      console.log("Calculating CostMatrix for room: ", n);
       let result = fn(n);
       room.memory.roomCostMatrix[n] = result;
       return result;
